@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<workbench progressCount="30" version="2.0">
+<workbench progressCount="31" version="2.0">
 <workbenchAdvisor/>
-<window height="1177" width="974" x="953" y="0">
+<window height="1177" maximized="true" width="974" x="509" y="-17">
 <fastViewData fastViewLocation="1024"/>
 <intro standby="true"/>
 <perspectiveBar>
@@ -9,7 +9,7 @@
 </perspectiveBar>
 <coolbarLayout>
 <coolItem id="group.file" itemType="typeGroupMarker"/>
-<coolItem id="org.eclipse.ui.workbench.file" itemType="typeToolBarContribution" x="300" y="22"/>
+<coolItem id="org.eclipse.ui.workbench.file" itemType="typeToolBarContribution" x="122" y="22"/>
 <coolItem id="additions" itemType="typeGroupMarker"/>
 <coolItem id="org.eclipse.cdt.ui.CElementCreationActionSet" itemType="typeToolBarContribution" x="167" y="22"/>
 <coolItem id="org.eclipse.cdt.ui.buildConfigActionSet" itemType="typeToolBarContribution" x="89" y="22"/>
@@ -35,10 +35,6 @@
 </folder>
 </info>
 </editorArea>
-<editor activePart="true" focus="true" id="org.eclipse.cdt.ui.editor.CEditor" name="freertos_semaphore.c" partName="freertos_semaphore.c" path="D:/cjan957/SOPC_files/software/Assignment1/freertos_semaphore.c" title="freertos_semaphore.c" tooltip="Assignment1/freertos_semaphore.c" workbook="DefaultEditorWorkbook">
-<input factoryID="org.eclipse.ui.part.FileEditorInputFactory" path="/Assignment1/freertos_semaphore.c"/>
-<editorState selectionHorizontalPixel="0" selectionLength="0" selectionOffset="5908" selectionTopPixel="5452"/>
-</editor>
 <editor id="org.eclipse.cdt.ui.editor.CEditor" name="system.h" partName="system.h" path="D:/cjan957/SOPC_files/software/Assignment1_bsp/system.h" title="system.h" tooltip="Assignment1_bsp/system.h" workbook="DefaultEditorWorkbook">
 <input factoryID="org.eclipse.ui.part.FileEditorInputFactory" path="/Assignment1_bsp/system.h"/>
 <editorState selectionHorizontalPixel="0" selectionLength="18" selectionOffset="5964" selectionTopPixel="3128"/>
@@ -52,11 +48,6 @@
 <view id="org.eclipse.cdt.make.ui.views.MakeView" partName="Make Target"/>
 <view id="org.eclipse.ui.views.ProblemView" partName="Problems">
 <viewState PRIMARY_SORT_FIELD="org.eclipse.ui.ide.severityAndDescriptionField" categoryGroup="org.eclipse.ui.ide.severity" markerContentGenerator="org.eclipse.ui.ide.problemsGenerator" partName="Problems">
-<expanded>
-<category IMemento.internal.id="Warnings (1 item)"/>
-<category IMemento.internal.id="Warnings"/>
-<category IMemento.internal.id="Errors"/>
-</expanded>
 <columnWidths org.eclipse.ui.ide.locationField="90" org.eclipse.ui.ide.markerType="90" org.eclipse.ui.ide.pathField="120" org.eclipse.ui.ide.resourceField="90" org.eclipse.ui.ide.severityAndDescriptionField="300"/>
 <visible IMemento.internal.id="org.eclipse.ui.ide.severityAndDescriptionField"/>
 <visible IMemento.internal.id="org.eclipse.ui.ide.resourceField"/>
@@ -80,7 +71,7 @@
 <viewState/>
 </view>
 </views>
-<perspectives activePart="org.eclipse.cdt.ui.editor.CEditor" activePerspective="com.altera.sbtgui.ui.cPerspective">
+<perspectives activePart="org.eclipse.ui.navigator.ProjectExplorer" activePerspective="com.altera.sbtgui.ui.cPerspective">
 <perspective editorAreaTrimState="2" editorAreaVisible="1" fixed="0" version="0.016">
 <descriptor class="org.eclipse.cdt.internal.ui.CPerspectiveFactory" id="org.eclipse.cdt.ui.CPerspective" label="C/C++"/>
 <alwaysOnActionSet id="org.eclipse.mylyn.context.ui.actionSet"/>
@@ -150,52 +141,38 @@
 <view id="org.eclipse.mylyn.tasks.ui.views.tasks"/>
 <view id="org.eclipse.ui.internal.introview"/>
 <fastViewBars/>
-<layout>
-<mainWindow>
-<info folder="true" part="topLeft">
-<folder activePageID="org.eclipse.ui.navigator.ProjectExplorer" appearance="2" expanded="2">
-<page content="org.eclipse.ui.navigator.ProjectExplorer" label="Project Explorer"/>
+<layout>&#x0A;<mainWindow>&#x0A;<info folder="true" part="topLeft">&#x0A;<folder activePageID="org.eclipse.ui.navigator.ProjectExplorer" appearance="2" expanded="2">&#x0A;<page content="org.eclipse.ui.navigator.ProjectExplorer" label="Project Explorer"/>
 <page content="org.eclipse.cdt.ui.CView" label="LabelNotFound"/>
 <page content="org.eclipse.ui.views.ResourceNavigator" label="LabelNotFound"/>
 <page content="org.eclipse.ui.views.BookmarkView" label="LabelNotFound"/>
-<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">
-<part id="0"/>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">&#x0A;<part id="0"/>
 </presentation>
 </folder>
 </info>
-<info folder="true" part="org.eclipse.ui.internal.ViewStack@15e3974" ratio="0.75" ratioLeft="750" ratioRight="250" relationship="2" relative="topLeft">
-<folder activePageID="org.eclipse.ui.internal.introview" appearance="2" expanded="1">
-<page content="org.eclipse.ui.internal.introview" label="Welcome"/>
+<info folder="true" part="org.eclipse.ui.internal.ViewStack@15e3974" ratio="0.75" ratioLeft="750" ratioRight="250" relationship="2" relative="topLeft">&#x0A;<folder activePageID="org.eclipse.ui.internal.introview" appearance="2" expanded="1">&#x0A;<page content="org.eclipse.ui.internal.introview" label="Welcome"/>
 <page content="org.eclipse.help.ui.HelpView" label="LabelNotFound"/>
 <page content="org.eclipse.ui.cheatsheets.views.CheatSheetView" label="LabelNotFound"/>
-<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">
-<part id="0"/>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">&#x0A;<part id="0"/>
 </presentation>
 </folder>
 </info>
 <info part="org.eclipse.ui.editorss" ratio="0.25" ratioLeft="250" ratioRight="750" relationship="2" relative="topLeft"/>
-<info folder="true" part="bottom" ratio="0.74922603" ratioLeft="484" ratioRight="162" relationship="4" relative="org.eclipse.ui.editorss">
-<folder activePageID="org.eclipse.ui.views.ProblemView" appearance="2" expanded="2">
-<page content="org.eclipse.ui.views.ProblemView" label="Problems"/>
+<info folder="true" part="bottom" ratio="0.74922603" ratioLeft="484" ratioRight="162" relationship="4" relative="org.eclipse.ui.editorss">&#x0A;<folder activePageID="org.eclipse.ui.views.ProblemView" appearance="2" expanded="2">&#x0A;<page content="org.eclipse.ui.views.ProblemView" label="Problems"/>
 <page content="org.eclipse.ui.views.TaskList" label="Tasks"/>
 <page content="org.eclipse.ui.console.ConsoleView" label="Console"/>
 <page content="org.eclipse.ui.views.PropertySheet" label="Properties"/>
 <page content="com.altera.sbtgui.launch.hardware.ByteStreamConsoleView" label="LabelNotFound"/>
-<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">
-<part id="0"/>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">&#x0A;<part id="0"/>
 <part id="1"/>
 <part id="2"/>
 <part id="3"/>
 </presentation>
 </folder>
 </info>
-<info folder="true" part="topRight" ratio="0.7493333" ratioLeft="562" ratioRight="188" relationship="2" relative="org.eclipse.ui.editorss">
-<folder activePageID="org.eclipse.ui.views.ContentOutline" appearance="2" expanded="2">
-<page content="org.eclipse.ui.views.ContentOutline" label="Outline"/>
+<info folder="true" part="topRight" ratio="0.7493333" ratioLeft="562" ratioRight="188" relationship="2" relative="org.eclipse.ui.editorss">&#x0A;<folder activePageID="org.eclipse.ui.views.ContentOutline" appearance="2" expanded="2">&#x0A;<page content="org.eclipse.ui.views.ContentOutline" label="Outline"/>
 <page content="org.eclipse.cdt.make.ui.views.MakeView" label="Make Target"/>
 <page content="org.eclipse.mylyn.tasks.ui.views.tasks" label="Task List"/>
-<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">
-<part id="0"/>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">&#x0A;<part id="0"/>
 <part id="1"/>
 <part id="2"/>
 </presentation>
@@ -242,12 +219,8 @@
 <view id="org.eclipse.ui.views.TaskList"/>
 <view id="org.eclipse.ui.console.ConsoleView"/>
 <view id="org.eclipse.ui.views.PropertySheet"/>
+<view id="org.eclipse.ui.internal.introview"/>
 <fastViewBars>
-<fastViewBar fastViewLocation="1024" id="org.eclipse.ui.internal.ViewStack@117e889" orientation="512" selectedTabId="org.eclipse.ui.internal.introview" style="0">
-<fastViews>
-<view id="org.eclipse.ui.internal.introview" ratio="0.3"/>
-</fastViews>
-</fastViewBar>
 <fastViewBar fastViewLocation="131072" id="topRight" orientation="512" selectedTabId="org.eclipse.ui.views.ContentOutline" style="0">
 <fastViews>
 <view id="org.eclipse.ui.views.ContentOutline" ratio="0.3"/>
@@ -268,21 +241,23 @@
 </folder>
 </info>
 <info folder="true" part="org.eclipse.ui.internal.ViewStack@117e889" ratio="0.75" ratioLeft="750" ratioRight="250" relationship="2" relative="topLeft">
-<folder appearance="2" expanded="0">
+<folder activePageID="org.eclipse.ui.internal.introview" appearance="2" expanded="2">
+<page content="org.eclipse.ui.internal.introview" label="Welcome"/>
 <page content="org.eclipse.help.ui.HelpView" label="LabelNotFound"/>
-<page content="org.eclipse.ui.internal.introview" label="LabelNotFound"/>
 <page content="org.eclipse.ui.cheatsheets.views.CheatSheetView" label="LabelNotFound"/>
-<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory"/>
+<presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">
+<part id="0"/>
+</presentation>
 </folder>
 </info>
 <info part="org.eclipse.ui.editorss" ratio="0.25" ratioLeft="250" ratioRight="750" relationship="2" relative="topLeft"/>
 <info folder="true" part="bottom" ratio="0.72667295" ratioLeft="771" ratioRight="290" relationship="4" relative="org.eclipse.ui.editorss">
-<folder activePageID="com.altera.sbtgui.launch.hardware.ByteStreamConsoleView:USB-Blaster on localhost [USB-0].1.0" appearance="2" expanded="2">
+<folder activePageID="org.eclipse.ui.views.ProblemView" appearance="2" expanded="2">
 <page content="org.eclipse.ui.views.ProblemView" label="Problems"/>
 <page content="org.eclipse.ui.views.TaskList" label="Tasks"/>
 <page content="org.eclipse.ui.console.ConsoleView" label="Console"/>
 <page content="org.eclipse.ui.views.PropertySheet" label="Properties"/>
-<page content="com.altera.sbtgui.launch.hardware.ByteStreamConsoleView:USB-Blaster on localhost [USB-0].1.0" label="Nios II Console"/>
+<page content="com.altera.sbtgui.launch.hardware.ByteStreamConsoleView:USB-Blaster on localhost [USB-0].1.0" label="LabelNotFound"/>
 <page content="com.altera.sbtgui.launch.hardware.ByteStreamConsoleView:*" label="LabelNotFound"/>
 <page content="com.altera.sbtgui.launch.hardware.ByteStreamConsoleView" label="LabelNotFound"/>
 <presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory">
@@ -290,12 +265,11 @@
 <part id="1"/>
 <part id="2"/>
 <part id="3"/>
-<part id="4"/>
 </presentation>
 </folder>
 </info>
 <info folder="true" part="topRight" ratio="0.7493333" ratioLeft="562" ratioRight="188" relationship="2" relative="org.eclipse.ui.editorss">
-<folder appearance="2" expanded="0">
+<folder appearance="2" expanded="2">
 <page content="org.eclipse.ui.views.ContentOutline" label="LabelNotFound"/>
 <presentation id="org.eclipse.ui.presentations.WorkbenchPresentationFactory"/>
 </folder>
