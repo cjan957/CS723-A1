@@ -51,6 +51,9 @@ double currentFrequency = 0.0;
 unsigned int unstableFlag = 0; //stable = 0, unstable = 1
 unsigned int isMonitoring = 0;
 
+unsigned int condition1_freqencyThreshold = 50;
+unsigned int condition2_freqencyThreshold = 50;
+
 //semaphore
 SemaphoreHandle_t shedSemaphore;
 SemaphoreHandle_t connectSemaphore;
@@ -108,7 +111,7 @@ void freq_relay(){
 	return;
 }
 
-void UnderFrequencyMonitor(void *pvParameters)
+void ConditionChecking(void *pvParameters)
 {
 	double freqValue;
 
@@ -117,6 +120,11 @@ void UnderFrequencyMonitor(void *pvParameters)
 		if(uxQueueMessagesWaiting( xFreqQueue ) != 0){
 			xQueueReceive( xFreqQueue, (void *) &freqValue, 0 );
 			printf("Frequency %f \n", freqValue);
+
+			if(freqValue > condition1_freqencyThreshold)
+			{
+
+			}
 		}
 		vTaskDelay(10);
 	}
@@ -364,7 +372,7 @@ int initCreateTasks(void)
 {
 
 	//	xTaskCreate(TimerControl, "TimerControl", 1024, NULL, 5 , NULL);
-	xTaskCreate(UnderFrequencyMonitor, "UnderFrequencyMonitor", 1024, NULL, 9, NULL);
+	xTaskCreate(ConditionChecking, "ConditionChecking", 1024, NULL, 9, NULL);
 	//	xTaskCreate(ControlCentre, "ControlCentre", 1024, NULL, 4, NULL);
 	//	xTaskCreate(Shedder, "Shedder", 1024, NULL, 3, NULL);
 	//	xTaskCreate(Connector, "Connector", 1024, NULL, 2, NULL);
