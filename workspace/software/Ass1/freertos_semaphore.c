@@ -9,6 +9,9 @@
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 
+#include "system.h"
+#include "io.h"
+
 //NIOS2
 #include "sys/alt_alarm.h"
 
@@ -28,6 +31,7 @@
 // Definition of Message Queue
 #define   MSG_QUEUE_SIZE  30
 QueueHandle_t msgqueue;
+QueueHandle_t xFreqQueue;
 
 // used to delete a task
 TaskHandle_t xHandle;
@@ -74,6 +78,9 @@ unsigned int numberOfLoadConnected = 5;
 int initOSDataStructs(void);
 int initCreateTasks(void);
 
+void initInterrupts(void);
+//void LCDController(void *);
+
 
 alt_u32 unstableTimer_isr_function(void *context)
 {
@@ -87,36 +94,31 @@ alt_u32 stableTimer_isr_function(void *context)
 	return 500;
 }
 
+const TickType_t delay50ms = 50/ portTICK_PERIOD_MS;
+const TickType_t delay10ms = 10/ portTICK_PERIOD_MS;
 
-void SignalSimulator(void *pvParameters)
+
+void freq_relay(){
+
+	#define SAMPLING_FREQ 16000.0
+	double temp = SAMPLING_FREQ/(double)IORD(FREQUENCY_ANALYSER_BASE, 0);
+
+	xQueueSendToBackFromISR( xFreqQueue, &temp, pdFALSE );
+
+	return;
+}
+
+void UnderFrequencyMonitor(void *pvParameters)
 {
-	//double currentFrequency = 0.0;
+	double freqValue;
+
 	while(1)
 	{
-		currentFrequency = 50.0;
-		taskENTER_CRITICAL();
-		printf("50\n");
-		taskEXIT_CRITICAL();
-
-		vTaskDelay(5000);
-		currentFrequency = 49.0;
-		taskENTER_CRITICAL();
-		printf("49\n");
-		taskEXIT_CRITICAL();
-
-		vTaskDelay(5000);
-		currentFrequency = 50;
-		taskENTER_CRITICAL();
-		printf("50\n");
-		taskEXIT_CRITICAL();
-
-		vTaskDelay(5000);
-		currentFrequency = 5;
-		taskENTER_CRITICAL();
-		printf("5\n");
-		taskEXIT_CRITICAL();
-
-		vTaskDelay(5000);
+		if(uxQueueMessagesWaiting( xFreqQueue ) != 0){
+			xQueueReceive( xFreqQueue, (void *) &freqValue, 0 );
+			printf("Frequency %f \n", freqValue);
+		}
+		vTaskDelay(10);
 	}
 }
 
@@ -155,22 +157,7 @@ void TimerControl(void *pvParameters)
 }
 
 
-void UnderFrequencyMonitor(void *pvParameters)
-{
-	while(1)
-	{
-		if(currentFrequency < 50.0 && currentFrequency > 0.0)
-		{
-			unstableFlag = 1;
-			IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x1);
-		}
-		else
-		{
-			unstableFlag = 0;
-			IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x0);
-		}
-	}
-}
+
 
 void ControlCentre(void *pvParameters)
 {
@@ -225,7 +212,7 @@ void Connector(void *pvParameters)
 	}
 }
 
-void LEDController(void *pvParameters)
+void LCDController(void *pvParameters)
 {
 	while(1)
 	{
@@ -241,27 +228,27 @@ void LEDController(void *pvParameters)
 // The following test prints out status information every 3 seconds.
 void print_status_task(void *pvParameters)
 {
-//	while (1)
-//	{
-//		vTaskDelay(3000);
-//		printf("****************************************************************\n");
-//		printf("Hello From FreeRTOS Running on NIOS II.  Here is the status:\n");
-//		printf("\n");
-//		printf("The number of messages sent by the send_task:         %d\n", number_of_messages_sent);
-//		printf("\n");
-//		printf("The number of messages received by the receive_task1: %d\n", number_of_messages_received_task1);
-//		printf("\n");
-//		printf("The number of messages received by the receive_task2: %d\n", number_of_messages_received_task2);
-//		printf("\n");
-//		printf("The shared resource is owned by: %s\n", &sem_owner_task_name[0]);
-//		printf("\n");
-//		printf("The Number of times getsem_task1 acquired the semaphore %d\n", getsem_task1_got_sem);
-//		printf("\n");
-//		printf("The Number of times getsem_task2 acquired the semaphore %d\n", getsem_task2_got_sem);
-//		printf("\n");
-//		printf("****************************************************************\n");
-//		printf("\n");
-//	}
+	//	while (1)
+	//	{
+	//		vTaskDelay(3000);
+	//		printf("****************************************************************\n");
+	//		printf("Hello From FreeRTOS Running on NIOS II.  Here is the status:\n");
+	//		printf("\n");
+	//		printf("The number of messages sent by the send_task:         %d\n", number_of_messages_sent);
+	//		printf("\n");
+	//		printf("The number of messages received by the receive_task1: %d\n", number_of_messages_received_task1);
+	//		printf("\n");
+	//		printf("The number of messages received by the receive_task2: %d\n", number_of_messages_received_task2);
+	//		printf("\n");
+	//		printf("The shared resource is owned by: %s\n", &sem_owner_task_name[0]);
+	//		printf("\n");
+	//		printf("The Number of times getsem_task1 acquired the semaphore %d\n", getsem_task1_got_sem);
+	//		printf("\n");
+	//		printf("The Number of times getsem_task2 acquired the semaphore %d\n", getsem_task2_got_sem);
+	//		printf("\n");
+	//		printf("****************************************************************\n");
+	//		printf("\n");
+	//	}
 }
 
 // The next two task compete for a shared resource via a semaphore.  The name of
@@ -269,28 +256,28 @@ void print_status_task(void *pvParameters)
 // sem_owner_task_name[].
 void getsem_task1(void *pvParameters)
 {
-//	while (1)
-//	{
-//		xSemaphoreTake(shared_resource_sem, portMAX_DELAY);
-//		// block forever until receive the mutex
-//		strcpy(&sem_owner_task_name[0], "getsem_task1");
-//		getsem_task1_got_sem++;
-//		xSemaphoreGive(shared_resource_sem);
-//		vTaskDelay(100);
-//	}
+	//	while (1)
+	//	{
+	//		xSemaphoreTake(shared_resource_sem, portMAX_DELAY);
+	//		// block forever until receive the mutex
+	//		strcpy(&sem_owner_task_name[0], "getsem_task1");
+	//		getsem_task1_got_sem++;
+	//		xSemaphoreGive(shared_resource_sem);
+	//		vTaskDelay(100);
+	//	}
 }
 
 void getsem_task2(void *pvParameters)
 {
-//	while (1)
-//	{
-//		xSemaphoreTake(shared_resource_sem, portMAX_DELAY);
-//		// block forever until receive the mutex
-//		strcpy(&sem_owner_task_name[0], "getsem_task2");
-//		getsem_task2_got_sem++;
-//		xSemaphoreGive(shared_resource_sem);
-//		vTaskDelay(130);
-//	}
+	//	while (1)
+	//	{
+	//		xSemaphoreTake(shared_resource_sem, portMAX_DELAY);
+	//		// block forever until receive the mutex
+	//		strcpy(&sem_owner_task_name[0], "getsem_task2");
+	//		getsem_task2_got_sem++;
+	//		xSemaphoreGive(shared_resource_sem);
+	//		vTaskDelay(130);
+	//	}
 }
 
 // The following task fills up a message queue with incrementing data.  The data
@@ -298,20 +285,20 @@ void getsem_task2(void *pvParameters)
 // suspended for 1 second.
 void send_task(void *pvParameters)
 {
-//	unsigned int msg = 0;
-//	while (1)
-//	{
-//		if (xQueueSend(msgqueue, (void *)&msg, 0) == pdPASS)
-//		{
-//			// in the message queue
-//			msg++;
-//			number_of_messages_sent++;
-//		}
-//		else
-//		{
-//			vTaskDelay(1000);
-//		}
-//	}
+	//	unsigned int msg = 0;
+	//	while (1)
+	//	{
+	//		if (xQueueSend(msgqueue, (void *)&msg, 0) == pdPASS)
+	//		{
+	//			// in the message queue
+	//			msg++;
+	//			number_of_messages_sent++;
+	//		}
+	//		else
+	//		{
+	//			vTaskDelay(1000);
+	//		}
+	//	}
 }
 
 // The next two task pull messages in the queue at different rates.  The number
@@ -321,9 +308,9 @@ void receive_task1(void *pvParameters)
 	unsigned int *msg;
 	while (1)
 	{
-//		xQueueReceive(msgqueue, &msg, portMAX_DELAY);
-//		number_of_messages_received_task1++;
-//		vTaskDelay(333);
+		//		xQueueReceive(msgqueue, &msg, portMAX_DELAY);
+		//		number_of_messages_received_task1++;
+		//		vTaskDelay(333);
 	}
 }
 
@@ -332,56 +319,55 @@ void receive_task2(void *pvParameters)
 	unsigned int *msg;
 	while (1)
 	{
-//		xQueueReceive(msgqueue, &msg, portMAX_DELAY);
-//		number_of_messages_received_task2++;
-//		vTaskDelay(1000);
+		//		xQueueReceive(msgqueue, &msg, portMAX_DELAY);
+		//		number_of_messages_received_task2++;
+		//		vTaskDelay(1000);
 	}
 }
 
 int main(int argc, char* argv[], char* envp[])
 {
-//	initOSDataStructs();
+	initOSDataStructs();
 	initCreateTasks();
-	shedSemaphore = xSemaphoreCreateBinary();
-	connectSemaphore = xSemaphoreCreateBinary();
+	initInterrupts();
+	//shedSemaphore = xSemaphoreCreateBinary();
+	//connectSemaphore = xSemaphoreCreateBinary();
 
-	if(shedSemaphore == NULL || connectSemaphore == NULL)
-	{
-		taskENTER_CRITICAL();
-		printf("Insufficient heap to create semaphores");
-		taskEXIT_CRITICAL();
-	}
+	//	if(shedSemaphore == NULL || connectSemaphore == NULL)
+	//	{
+	//		taskENTER_CRITICAL();
+	//		printf("Insufficient heap to create semaphores");
+	//		taskEXIT_CRITICAL();
+	//	}
 
 	vTaskStartScheduler();
 	for (;;);
 	return 0;
 }
 
+void initInterrupts(void)
+{
+	alt_irq_register(FREQUENCY_ANALYSER_IRQ, 0, freq_relay);
+}
+
 // This function simply creates a message queue and a semaphore
 int initOSDataStructs(void)
 {
-//	msgqueue = xQueueCreate( MSG_QUEUE_SIZE, sizeof( void* ) );
-//	shared_resource_sem = xSemaphoreCreateCounting( 9999, 1 );
+	//	msgqueue = xQueueCreate( MSG_QUEUE_SIZE, sizeof( void* ) );
+	xFreqQueue = xQueueCreate( 100, sizeof( double ) );
+	//	shared_resource_sem = xSemaphoreCreateCounting( 9999, 1 );
 	return 0;
 }
 
 // This function creates the tasks used in this example
 int initCreateTasks(void)
 {
-	xTaskCreate(SignalSimulator, "signalSimulator", 1024, NULL, 7, NULL);
-//	xTaskCreate(TimerControl, "TimerControl", 1024, NULL, 5 , NULL);
-	xTaskCreate(UnderFrequencyMonitor, "UnderFrequencyMonitor", 1024, NULL, 6, NULL);
-//	xTaskCreate(ControlCentre, "ControlCentre", 1024, NULL, 4, NULL);
-//	xTaskCreate(Shedder, "Shedder", 1024, NULL, 3, NULL);
-//	xTaskCreate(Connector, "Connector", 1024, NULL, 2, NULL);
-	xTaskCreate(LEDController, "LEDController", 1024, NULL, 8, NULL);
 
-
-//	xTaskCreate(getsem_task1, "getsem_task1", TASK_STACKSIZE, NULL, GETSEM_TASK1_PRIORITY, NULL);
-//	xTaskCreate(getsem_task2, "getsem_task2", TASK_STACKSIZE, NULL, GETSEM_TASK2_PRIORITY, NULL);
-//	xTaskCreate(receive_task1, "receive_task1", TASK_STACKSIZE, NULL, RECEIVE_TASK1_PRIORITY, NULL);
-//	xTaskCreate(receive_task2, "receive_task2", TASK_STACKSIZE, NULL, RECEIVE_TASK2_PRIORITY, NULL);
-//	xTaskCreate(send_task, "send_task", TASK_STACKSIZE, NULL, SEND_TASK_PRIORITY, NULL);
-//	xTaskCreate(print_status_task, "print_status_task", TASK_STACKSIZE, NULL, PRINT_STATUS_TASK_PRIORITY, NULL);
+	//	xTaskCreate(TimerControl, "TimerControl", 1024, NULL, 5 , NULL);
+	xTaskCreate(UnderFrequencyMonitor, "UnderFrequencyMonitor", 1024, NULL, 9, NULL);
+	//	xTaskCreate(ControlCentre, "ControlCentre", 1024, NULL, 4, NULL);
+	//	xTaskCreate(Shedder, "Shedder", 1024, NULL, 3, NULL);
+	//	xTaskCreate(Connector, "Connector", 1024, NULL, 2, NULL);
+	//xTaskCreate(LCDController, "LCDController", 1024, NULL, 8, NULL);
 	return 0;
 }

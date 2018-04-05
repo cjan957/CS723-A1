@@ -1,4 +1,6 @@
 *.index
 *.xml
 *.csv
-
+*.tree
+*.log
+*.metadata
