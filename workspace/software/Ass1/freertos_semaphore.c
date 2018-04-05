@@ -31,7 +31,10 @@
 // Definition of Message Queue
 #define   MSG_QUEUE_SIZE  30
 QueueHandle_t msgqueue;
+
 QueueHandle_t xFreqQueue;
+QueueHandle_t xStatusQueue;
+QueueHandle_t xInstructionQueue;
 
 // used to delete a task
 TaskHandle_t xHandle;
@@ -88,13 +91,15 @@ void initInterrupts(void);
 alt_u32 unstableTimer_isr_function(void *context)
 {
 	unstableTimerFlag = 1;
-	return 500;
+	printf("unstabletimer done");
+	return 10;
 }
 
 alt_u32 stableTimer_isr_function(void *context)
 {
 	stableTimerFlag = 1;
-	return 500;
+	printf("stabletimer done");
+	return 10;
 }
 
 const TickType_t delay50ms = 50/ portTICK_PERIOD_MS;
@@ -111,26 +116,41 @@ void freq_relay(){
 	return;
 }
 
+unsigned int global_unstableFlag = 0;
+
 void ConditionChecking(void *pvParameters)
 {
 	double freqValue;
+	unsigned int unstable_status = 1;
+	unsigned int stable_status = 0;
 
 	while(1)
 	{
 		if(uxQueueMessagesWaiting( xFreqQueue ) != 0){
 
 			xQueueReceive( xFreqQueue, (void *) &freqValue, 0 );
-			printf("Frequency %f \n", freqValue);
+			taskENTER_CRITICAL();
+			printf("Frequency: %fHz\n", freqValue);
+			taskEXIT_CRITICAL();
 
-			//condition 1 checking
+			//condition 1 checking ONLY
 			if(freqValue < condition1_freqencyThreshold)
 			{
-
+				xQueueSend(xStatusQueue, &unstable_status, 10);
+				global_unstableFlag = 1;
+			}
+			else
+			{
+				xQueueSend(xStatusQueue, &stable_status, 10);
+				global_unstableFlag = 0;
 			}
 		}
 		vTaskDelay(10);
 	}
 }
+
+
+
 
 
 void TimerControl(void *pvParameters)
@@ -139,8 +159,10 @@ void TimerControl(void *pvParameters)
 	{
 		if(isMonitoring)
 		{
-			if(unstableFlag == 1 && unstable_timer_running == 0)
+			//printf("in timer control");
+			if(global_unstableFlag == 1 && unstable_timer_running == 0)
 			{
+				printf("first triggered \n");
 				//start timers
 				alt_alarm_start(&unstableTimer500, 500, unstableTimer_isr_function, NULL);
 				alt_alarm_stop(&stableTimer500);
@@ -150,19 +172,20 @@ void TimerControl(void *pvParameters)
 				unstableTimerFlag = 0;
 				stableTimerFlag = 0;
 			}
-			else if(unstableFlag == 0 && stable_timer_running == 1)
+			else if( (global_unstableFlag == 0 && unstable_timer_running == 1))
 			{
 				//start timers
+				printf("second triggered \n");
 				alt_alarm_start(&stableTimer500, 500, stableTimer_isr_function, NULL);
 				alt_alarm_stop(&unstableTimer500);
 				stable_timer_running = 1;
-				unstable_timer_running = 1;
+				unstable_timer_running = 0;
 
 				unstableTimerFlag = 0;
 				stableTimerFlag = 0;
 			}
 		}
-
+		vTaskDelay(10);
 	}
 }
 
@@ -171,43 +194,76 @@ void TimerControl(void *pvParameters)
 
 void ControlCentre(void *pvParameters)
 {
-	if(unstableFlag == 1 && !isMonitoring)
+	unsigned int isUnstable = 0;
+
+	while(1)
 	{
-		xSemaphoreGive(shedSemaphore);
-		isMonitoring = 1;
-		alt_alarm_start(&unstableTimer500, 500, unstableTimer_isr_function, NULL);
-		unstable_timer_running = 1;
-	}
-	else if(isMonitoring)
-	{
-		if(unstableFlag == 1)
-		{
-			if(unstableTimerFlag == 1)
+		if(uxQueueMessagesWaiting( xStatusQueue ) != 0){
+
+			xQueueReceive( xStatusQueue, (void *) &isUnstable, 0 );
+
+			if(!isMonitoring)
 			{
-				xSemaphoreGive(shedSemaphore);
-				unstableTimerFlag = 0;
+				//printf("ControlCentre isUnstable : %d", isUnstable);
+				//unstable for the first time
+				if(isUnstable == 1)
+				{
+					printf("initial unstable \n");
+					xQueueSend(xInstructionQueue, &isUnstable, 10);
+					isMonitoring = 1;
+					alt_alarm_start(&unstableTimer500, 500, unstableTimer_isr_function, NULL);
+					unstable_timer_running = 1;
+					stable_timer_running = 0;
+				}
+			}
+			else{
+				if(isUnstable == 1 && unstableTimerFlag == 1)
+				{
+					printf("unstable = %d \n", isUnstable);
+					xQueueSend(xInstructionQueue, &isUnstable, 10);
+					unstableTimerFlag =0;
+				}
+				else if(isUnstable == 0 && stableTimerFlag == 1)
+				{
+					printf("stable = %d \n", isUnstable);
+					xQueueSend(xInstructionQueue, &isUnstable, 10);
+					stableTimerFlag = 0;
+				}
 			}
 		}
-		else if(unstableFlag == 0)
-		{
-			if(stableTimerFlag == 1)
-			{
-				xSemaphoreGive(connectSemaphore);
-				stableTimerFlag = 0;
-			}
-		}
+		vTaskDelay(10);
 	}
 }
 
-void Shedder(void *pvParameters)
+void ManageLoad(void *pvParameters)
 {
+	unsigned int instruction = 3;
 	while(1)
 	{
-		if(xSemaphoreTake(shedSemaphore, portMAX_DELAY))
+		if(uxQueueMessagesWaiting(xInstructionQueue) != 0)
 		{
-			numberOfLoadConnected++;
-		}
+			xQueueReceive(xInstructionQueue, &instruction, 10);
 
+			printf("INSTRUCTION RECEIVED IN MANAGE LOAD AS : %d \n", instruction);
+
+			if(instruction == 0)
+			{//connect
+				IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x1);
+				instruction = 3;
+
+			}
+			else if(instruction == 1)
+			{//shed
+				IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x0);
+				instruction = 3;
+			}
+			else{
+				//not expected
+				printf("unexpected beh");
+			}
+
+		}
+		vTaskDelay(10);
 	}
 }
 
@@ -340,6 +396,9 @@ int main(int argc, char* argv[], char* envp[])
 	initOSDataStructs();
 	initCreateTasks();
 	initInterrupts();
+
+	//turn it on initially
+	IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x1);
 	//shedSemaphore = xSemaphoreCreateBinary();
 	//connectSemaphore = xSemaphoreCreateBinary();
 
@@ -365,6 +424,8 @@ int initOSDataStructs(void)
 {
 	//	msgqueue = xQueueCreate( MSG_QUEUE_SIZE, sizeof( void* ) );
 	xFreqQueue = xQueueCreate( 100, sizeof( double ) );
+	xStatusQueue = xQueueCreate(100, sizeof(unsigned int));
+	xInstructionQueue = xQueueCreate(100, sizeof(unsigned int ));
 	//	shared_resource_sem = xSemaphoreCreateCounting( 9999, 1 );
 	return 0;
 }
@@ -373,10 +434,10 @@ int initOSDataStructs(void)
 int initCreateTasks(void)
 {
 
-	//	xTaskCreate(TimerControl, "TimerControl", 1024, NULL, 5 , NULL);
+	//xTaskCreate(TimerControl, "TimerControl", 1024, NULL, 8 , NULL);
 	xTaskCreate(ConditionChecking, "ConditionChecking", 1024, NULL, 9, NULL);
-	//	xTaskCreate(ControlCentre, "ControlCentre", 1024, NULL, 4, NULL);
-	//	xTaskCreate(Shedder, "Shedder", 1024, NULL, 3, NULL);
+	xTaskCreate(ControlCentre, "ControlCentre", 1024, NULL, 7, NULL);
+	xTaskCreate(ManageLoad, "ManageLoad", 1024, NULL, 6, NULL);
 	//	xTaskCreate(Connector, "Connector", 1024, NULL, 2, NULL);
 	//xTaskCreate(LCDController, "LCDController", 1024, NULL, 8, NULL);
 	return 0;
