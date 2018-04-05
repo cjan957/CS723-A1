@@ -118,10 +118,12 @@ void ConditionChecking(void *pvParameters)
 	while(1)
 	{
 		if(uxQueueMessagesWaiting( xFreqQueue ) != 0){
+
 			xQueueReceive( xFreqQueue, (void *) &freqValue, 0 );
 			printf("Frequency %f \n", freqValue);
 
-			if(freqValue > condition1_freqencyThreshold)
+			//condition 1 checking
+			if(freqValue < condition1_freqencyThreshold)
 			{
 
 			}
