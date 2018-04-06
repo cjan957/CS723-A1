@@ -13,11 +13,18 @@ void TimerControl(void *pvParameters)
 			{
 				printf("first triggered \n");
 				//start timers
-				alt_alarm_start(&unstableTimer500, 500, unstableTimer_isr_function, NULL);
-				alt_alarm_stop(&stableTimer500);
+				if(xTimerStart(unstableTimer500, 0) != pdPASS)
+				{
+					printf("cannot start UNstable timer");
+				}
+				if(xTimerStop(stableTimer500, 0) != pdPASS)
+				{
+					printf("cannot stop stable timer");
+				}
 				stable_timer_running = 0;
 				unstable_timer_running = 1;
 
+				//or use semaphore
 				unstableTimerFlag = 0;
 				stableTimerFlag = 0;
 			}
@@ -25,11 +32,20 @@ void TimerControl(void *pvParameters)
 			{
 				//start timers
 				printf("second triggered \n");
-				alt_alarm_start(&stableTimer500, 500, stableTimer_isr_function, NULL);
-				alt_alarm_stop(&unstableTimer500);
+
+				if(xTimerStart(stableTimer500, 0) != pdPASS)
+				{
+					printf("cannot start stable timer");
+				}
+				if(xTimerStop(unstableTimer500, 0) != pdPASS)
+				{
+					printf("cannot stop UNstable timer");
+				}
+
 				stable_timer_running = 1;
 				unstable_timer_running = 0;
 
+				//or use semaphore
 				unstableTimerFlag = 0;
 				stableTimerFlag = 0;
 			}

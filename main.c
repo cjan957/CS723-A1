@@ -1,6 +1,7 @@
 #include "main.h"
 #include "freq_relay.h"
 #include "ConditionChecking.h"
+#include "TimerControl.h"
 
 
 // Definition of Task Stacks
@@ -16,11 +17,6 @@ SemaphoreHandle_t shared_resource_sem;
 //semaphore
 SemaphoreHandle_t shedSemaphore;
 SemaphoreHandle_t connectSemaphore;
-
-
-
-//timer flags
-
 
 FILE* lcd;
 
@@ -56,6 +52,91 @@ const TickType_t delay50ms = 50/ portTICK_PERIOD_MS;
 const TickType_t delay10ms = 10/ portTICK_PERIOD_MS;
 
 
+int main(int argc, char* argv[], char* envp[])
+{
+	initOSDataStructs();
+	initCreateTasks();
+	initInterrupts();
+	initTimers();
+
+	global_unstableFlag = 0;
+
+	unstableTimerFlag = 0;
+	stableTimerFlag = 0;
+
+	stable_timer_running = 0;
+	unstable_timer_running = 0;
+
+	unstableFlag = 0; //stable = 0, unstable = 1
+	isMonitoring = 0;
+
+	//turn it on initially
+	IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x1);
+	//shedSemaphore = xSemaphoreCreateBinary();
+	//connectSemaphore = xSemaphoreCreateBinary();
+
+	//	if(shedSemaphore == NULL || connectSemaphore == NULL)
+	//	{
+	//		taskENTER_CRITICAL();
+	//		printf("Insufficient heap to create semaphores");
+	//		taskEXIT_CRITICAL();
+	//	}
+
+	vTaskStartScheduler();
+	for (;;);
+	return 0;
+}
+
+void initInterrupts(void)
+{
+	alt_irq_register(FREQUENCY_ANALYSER_IRQ, 0, freq_relay);
+}
+
+// This function simply creates a message queue and a semaphore
+int initOSDataStructs(void)
+{
+	//	msgqueue = xQueueCreate( MSG_QUEUE_SIZE, sizeof( void* ) );
+	xFreqQueue = xQueueCreate( 100, sizeof( double ) );
+	xStatusQueue = xQueueCreate(100, sizeof(unsigned int));
+	xInstructionQueue = xQueueCreate(100, sizeof(unsigned int ));
+	//	shared_resource_sem = xSemaphoreCreateCounting( 9999, 1 );
+	return 0;
+}
+
+// This function creates the tasks used in this example
+int initCreateTasks(void)
+{
+
+	xTaskCreate(TimerControl, "TimerControl", 1024, NULL, 8 , NULL);
+	xTaskCreate(ConditionChecking, "ConditionChecking", 1024, NULL, 9, NULL);
+	xTaskCreate(ControlCentre, "ControlCentre", 1024, NULL, 7, NULL);
+	xTaskCreate(ManageLoad, "ManageLoad", 1024, NULL, 6, NULL);
+	//	xTaskCreate(Connector, "Connector", 1024, NULL, 2, NULL);
+	//xTaskCreate(LCDController, "LCDController", 1024, NULL, 8, NULL);
+	return 0;
+}
+
+void vUnstableTimerCallback(xTimerHandle t_timer)
+{
+	//IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, 0xFF^IORD_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE));
+	unstableTimerFlag = 1;
+
+}
+
+void vStableTimerCallback(xTimerHandle t_timer)
+{
+	//IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0xFF^IORD_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE));
+	stableTimerFlag = 1;
+}
+
+
+void initTimers(void)
+{
+	unstableTimer500 = xTimerCreate("unstableTimer", 500, pdTRUE, NULL, vUnstableTimerCallback);
+	stableTimer500 = xTimerCreate("stableTimer", 500, pdTRUE, NULL, vStableTimerCallback);
+}
+
+
 
 void ControlCentre(void *pvParameters)
 {
@@ -69,14 +150,15 @@ void ControlCentre(void *pvParameters)
 
 			if(!isMonitoring)
 			{
-				//printf("ControlCentre isUnstable : %d", isUnstable);
-				//unstable for the first time
 				if(isUnstable == 1)
 				{
 					printf("initial unstable \n");
 					xQueueSend(xInstructionQueue, &isUnstable, 10);
 					isMonitoring = 1;
-					alt_alarm_start(&unstableTimer500, 500, unstableTimer_isr_function, NULL);
+					if(xTimerStart(unstableTimer500, 0) != pdPASS)
+					{
+						printf("cannot start unstable timer");
+					}
 					unstable_timer_running = 1;
 					stable_timer_running = 0;
 				}
@@ -132,16 +214,6 @@ void ManageLoad(void *pvParameters)
 	}
 }
 
-void Connector(void *pvParameters)
-{
-	while(1)
-	{
-		if(xSemaphoreTake(connectSemaphore, portMAX_DELAY))
-		{
-			numberOfLoadConnected--;
-		}
-	}
-}
 
 void LCDController(void *pvParameters)
 {
@@ -155,65 +227,5 @@ void LCDController(void *pvParameters)
 	}
 }
 
-void initInterrupts(void)
-{
-	alt_irq_register(FREQUENCY_ANALYSER_IRQ, 0, freq_relay);
-}
 
-// This function simply creates a message queue and a semaphore
-int initOSDataStructs(void)
-{
-	//	msgqueue = xQueueCreate( MSG_QUEUE_SIZE, sizeof( void* ) );
-	xFreqQueue = xQueueCreate( 100, sizeof( double ) );
-	xStatusQueue = xQueueCreate(100, sizeof(unsigned int));
-	xInstructionQueue = xQueueCreate(100, sizeof(unsigned int ));
-	//	shared_resource_sem = xSemaphoreCreateCounting( 9999, 1 );
-	return 0;
-}
 
-// This function creates the tasks used in this example
-int initCreateTasks(void)
-{
-
-	//xTaskCreate(TimerControl, "TimerControl", 1024, NULL, 8 , NULL);
-	xTaskCreate(ConditionChecking, "ConditionChecking", 1024, NULL, 9, NULL);
-	xTaskCreate(ControlCentre, "ControlCentre", 1024, NULL, 7, NULL);
-	xTaskCreate(ManageLoad, "ManageLoad", 1024, NULL, 6, NULL);
-	//	xTaskCreate(Connector, "Connector", 1024, NULL, 2, NULL);
-	//xTaskCreate(LCDController, "LCDController", 1024, NULL, 8, NULL);
-	return 0;
-}
-
-int main(int argc, char* argv[], char* envp[])
-{
-	initOSDataStructs();
-	initCreateTasks();
-	initInterrupts();
-
-	global_unstableFlag = 0;
-
-	unstableTimerFlag = 0;
-	stableTimerFlag = 0;
-
-	stable_timer_running = 0;
-	unstable_timer_running = 0;
-
-	unstableFlag = 0; //stable = 0, unstable = 1
-	isMonitoring = 0;
-
-	//turn it on initially
-	IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x1);
-	//shedSemaphore = xSemaphoreCreateBinary();
-	//connectSemaphore = xSemaphoreCreateBinary();
-
-	//	if(shedSemaphore == NULL || connectSemaphore == NULL)
-	//	{
-	//		taskENTER_CRITICAL();
-	//		printf("Insufficient heap to create semaphores");
-	//		taskEXIT_CRITICAL();
-	//	}
-
-	vTaskStartScheduler();
-	for (;;);
-	return 0;
-}
