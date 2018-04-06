@@ -1,6 +1,7 @@
 #include "main.h"
 #include "freq_relay.h"
 #include "ConditionChecking.h"
+#include "TimerControl.h"
 
 
 // Definition of Task Stacks
@@ -167,6 +168,7 @@ int initOSDataStructs(void)
 	xFreqQueue = xQueueCreate( 100, sizeof( double ) );
 	xStatusQueue = xQueueCreate(100, sizeof(unsigned int));
 	xInstructionQueue = xQueueCreate(100, sizeof(unsigned int ));
+	xROCQueue = xQueueCreate(100, sizeof(double ));
 	//	shared_resource_sem = xSemaphoreCreateCounting( 9999, 1 );
 	return 0;
 }
