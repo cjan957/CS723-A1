@@ -12,6 +12,8 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
+#include "FreeRTOS/timers.h"
+
 
 #include "system.h"
 #include "io.h"
@@ -32,11 +34,13 @@ unsigned int unstable_timer_running;
 unsigned int unstableFlag; //stable = 0, unstable = 1
 unsigned int isMonitoring;
 
-alt_alarm unstableTimer500;
-alt_alarm stableTimer500;
+//TIMERS
+TimerHandle_t unstableTimer500;
+TimerHandle_t stableTimer500;
 
-alt_u32 unstableTimer_isr_function(void *context);
-alt_u32 stableTimer_isr_function(void *context);
 
+void ControlCentre(void *pvParameters);
+void ManageLoad(void *pvParameters);
+void initTimers(void);
 
 #endif /* MAIN_H_ */
