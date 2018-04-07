@@ -17,6 +17,7 @@
 #include <altera_avalon_pio_regs.h>
 
 QueueHandle_t xFreqQueue;
+QueueHandle_t xDispFreqQueue;
 
 void freq_relay();
 

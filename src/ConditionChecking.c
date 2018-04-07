@@ -17,9 +17,9 @@ void test() {
 
 	xQueueReceive( xROCQueue, (void *) &ROC, 0 );
 
-	taskENTER_CRITICAL();
-	printf("Value: %f\n", ROC);
-	taskEXIT_CRITICAL();
+//	taskENTER_CRITICAL();
+//	printf("Value: %f\n", ROC);
+//	taskEXIT_CRITICAL();
 }
 
 
@@ -51,7 +51,7 @@ void ConditionChecking(void *pvParameters)
 				global_unstableFlag = 0;
 			}
 		}
-		test();
+		//test();
 		vTaskDelay(10);
 	}
 }

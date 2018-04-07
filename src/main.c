@@ -2,6 +2,7 @@
 #include "freq_relay.h"
 #include "ConditionChecking.h"
 #include "TimerControl.h"
+#include "VGA.h"
 
 
 // Definition of Task Stacks
@@ -51,7 +52,6 @@ alt_u32 stableTimer_isr_function(void *context)
 const TickType_t delay50ms = 50/ portTICK_PERIOD_MS;
 const TickType_t delay10ms = 10/ portTICK_PERIOD_MS;
 
-
 int main(int argc, char* argv[], char* envp[])
 {
 	initOSDataStructs();
@@ -97,6 +97,7 @@ int initOSDataStructs(void)
 {
 	//	msgqueue = xQueueCreate( MSG_QUEUE_SIZE, sizeof( void* ) );
 	xFreqQueue = xQueueCreate( 100, sizeof( double ) );
+	xDispFreqQueue = xQueueCreate( 100, sizeof( double ) );
 	xStatusQueue = xQueueCreate(100, sizeof(unsigned int));
 	xInstructionQueue = xQueueCreate(100, sizeof(unsigned int ));
 	xROCQueue = xQueueCreate(100, sizeof(double ));
@@ -112,6 +113,8 @@ int initCreateTasks(void)
 	xTaskCreate(ConditionChecking, "ConditionChecking", 1024, NULL, 9, NULL);
 	xTaskCreate(ControlCentre, "ControlCentre", 1024, NULL, 7, NULL);
 	xTaskCreate(ManageLoad, "ManageLoad", 1024, NULL, 6, NULL);
+	xTaskCreate(VGA_Draw, "VGA_Draw", 4096, NULL, 3, NULL);
+
 	//	xTaskCreate(Connector, "Connector", 1024, NULL, 2, NULL);
 	//xTaskCreate(LCDController, "LCDController", 1024, NULL, 8, NULL);
 	return 0;
