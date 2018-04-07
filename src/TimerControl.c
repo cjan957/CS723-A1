@@ -13,11 +13,11 @@ void TimerControl(void *pvParameters)
 			{
 				printf("first triggered \n");
 				//start timers
-				if(xTimerStart(unstableTimer500, 0) != pdPASS)
+				if(xTimerStart(unstableTimer500, 10) != pdPASS)
 				{
 					printf("cannot start UNstable timer");
 				}
-				if(xTimerStop(stableTimer500, 0) != pdPASS)
+				if(xTimerStop(stableTimer500, 10) != pdPASS)
 				{
 					printf("cannot stop stable timer");
 				}
@@ -33,11 +33,11 @@ void TimerControl(void *pvParameters)
 				//start timers
 				printf("second triggered \n");
 
-				if(xTimerStart(stableTimer500, 0) != pdPASS)
+				if(xTimerStart(stableTimer500, 10) != pdPASS)
 				{
 					printf("cannot start stable timer");
 				}
-				if(xTimerStop(unstableTimer500, 0) != pdPASS)
+				if(xTimerStop(unstableTimer500, 10) != pdPASS)
 				{
 					printf("cannot stop UNstable timer");
 				}

@@ -3,7 +3,7 @@
 #include "ConditionChecking.h"
 #include "TimerControl.h"
 #include "VGA.h"
-
+#include "Switches.h"
 
 // Definition of Task Stacks
 #define   TASK_STACKSIZE       2048
@@ -34,20 +34,6 @@ int initCreateTasks(void);
 void initInterrupts(void);
 //void LCDController(void *);
 
-
-alt_u32 unstableTimer_isr_function(void *context)
-{
-	unstableTimerFlag = 1;
-	printf("unstabletimer done");
-	return 10;
-}
-
-alt_u32 stableTimer_isr_function(void *context)
-{
-	stableTimerFlag = 1;
-	printf("stabletimer done");
-	return 10;
-}
 
 const TickType_t delay50ms = 50/ portTICK_PERIOD_MS;
 const TickType_t delay10ms = 10/ portTICK_PERIOD_MS;
@@ -100,7 +86,10 @@ int initOSDataStructs(void)
 	xDispFreqQueue = xQueueCreate( 100, sizeof( double ) );
 	xStatusQueue = xQueueCreate(100, sizeof(unsigned int));
 	xInstructionQueue = xQueueCreate(100, sizeof(unsigned int ));
-	xROCQueue = xQueueCreate(100, sizeof(double ));
+	xROCQueue = xQueueCreate(100, sizeof(double));
+	xSwitchPositionQueue = xQueueCreate(10, sizeof(unsigned int));
+
+	xShedLoadStatusQueue = xQueueCreate(10, sizeof(int[5]));
 	//	shared_resource_sem = xSemaphoreCreateCounting( 9999, 1 );
 	return 0;
 }
@@ -113,7 +102,9 @@ int initCreateTasks(void)
 	xTaskCreate(ConditionChecking, "ConditionChecking", 1024, NULL, 9, NULL);
 	xTaskCreate(ControlCentre, "ControlCentre", 1024, NULL, 7, NULL);
 	xTaskCreate(ManageLoad, "ManageLoad", 1024, NULL, 6, NULL);
-	xTaskCreate(VGA_Draw, "VGA_Draw", 4096, NULL, 3, NULL);
+	//xTaskCreate(VGA_Draw, "VGA_Draw", 4096, NULL, 3, NULL);
+	xTaskCreate(SwitchRead, "SwitchRead", 1024, NULL, 1, NULL);
+	xTaskCreate(LEDController, "LEDController", 1024, NULL, 5, NULL);
 
 	//	xTaskCreate(Connector, "Connector", 1024, NULL, 2, NULL);
 	//xTaskCreate(LCDController, "LCDController", 1024, NULL, 8, NULL);
@@ -122,14 +113,12 @@ int initCreateTasks(void)
 
 void vUnstableTimerCallback(xTimerHandle t_timer)
 {
-	//IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, 0xFF^IORD_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE));
 	unstableTimerFlag = 1;
 
 }
 
 void vStableTimerCallback(xTimerHandle t_timer)
 {
-	//IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0xFF^IORD_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE));
 	stableTimerFlag = 1;
 }
 
@@ -156,12 +145,12 @@ void ControlCentre(void *pvParameters)
 			{
 				if(isUnstable == 1)
 				{
-					printf("initial unstable \n");
+					//printf("initial unstable \n");
 					xQueueSend(xInstructionQueue, &isUnstable, 10);
 					isMonitoring = 1;
 					if(xTimerStart(unstableTimer500, 0) != pdPASS)
 					{
-						printf("cannot start unstable timer");
+						//printf("cannot start unstable timer");
 					}
 					unstable_timer_running = 1;
 					stable_timer_running = 0;
@@ -170,13 +159,13 @@ void ControlCentre(void *pvParameters)
 			else{
 				if(isUnstable == 1 && unstableTimerFlag == 1)
 				{
-					printf("unstable = %d \n", isUnstable);
+					//printf("unstable = %d \n", isUnstable);
 					xQueueSend(xInstructionQueue, &isUnstable, 10);
 					unstableTimerFlag =0;
 				}
 				else if(isUnstable == 0 && stableTimerFlag == 1)
 				{
-					printf("stable = %d \n", isUnstable);
+					//printf("stable = %d \n", isUnstable);
 					xQueueSend(xInstructionQueue, &isUnstable, 10);
 					stableTimerFlag = 0;
 				}
@@ -188,34 +177,100 @@ void ControlCentre(void *pvParameters)
 
 void ManageLoad(void *pvParameters)
 {
+	//instruction, 1 = shed, 0 = connect, others: ignore
 	unsigned int instruction = 3;
+
+	//keep track of shedStatus of each load, 1 if load has been shed.
+	//index 0 = lowest priority, 5 = highest
+	unsigned int loadShedStatus[5] = {0,0,0,0,0};
+
+	unsigned int switchStatus[5] = {0,0,0,0,0};
+
+	//masking for each switch position
+	unsigned int masking[5] = {1,2,4,8,16};
+
+	unsigned int currentSwitchValue = 0;
+
+	int i = 0;
+
 	while(1)
 	{
-		if(uxQueueMessagesWaiting(xInstructionQueue) != 0)
+		//Check to see if there's any change to the switch value
+		//CHANGE TO PEEK!!!
+		if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueueReceive(xSwitchPositionQueue, &currentSwitchValue, 10) == pdTRUE))
 		{
-			xQueueReceive(xInstructionQueue, &instruction, 10);
-
-			printf("INSTRUCTION RECEIVED IN MANAGE LOAD AS : %d \n", instruction);
-
-			if(instruction == 0)
-			{//connect
-				IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x1);
-				instruction = 3;
-
+			for(i = 0; i < 5; i++)
+			{
+				if((currentSwitchValue & masking[i]) != 0)
+				{
+					switchStatus[i] = 1;
+				}
+				else
+				{
+					switchStatus[i] = 0;
+					loadShedStatus[i] = 0;
+				}
 			}
-			else if(instruction == 1)
-			{//shed
-				IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x0);
-				instruction = 3;
-			}
-			else{
-				//not expected
-				printf("unexpected beh");
+			printf("Current Switch Position is %d, %d, %d, %d, %d \n", switchStatus[4],switchStatus[3],switchStatus[2],switchStatus[1],switchStatus[0]);
+		}
+
+		//Check to see if there's any new instruction
+		if((uxQueueMessagesWaiting(xInstructionQueue) != 0) && (xQueueReceive(xInstructionQueue, &instruction, 10) == pdTRUE))
+		{
+			switch(instruction)
+			{
+			case 0: //connect
+				//Connect the load, based on its priority and whether load's switch is on
+				for(i = 4; i >= 0; i--)
+				{
+					if((loadShedStatus[i] == 1) && (switchStatus[i] == 1))
+					{
+						loadShedStatus[i] = 0; //CONNECT
+						break;
+					}
+				}
+				break;
+			case 1: //shed
+				//Shed the load if it's hasn't been shed, based on the priority and whether
+				//switch is on.
+				for(i = 0; i < 5; i++)
+				{
+					if((loadShedStatus[i] == 0) && (switchStatus[i] == 1))
+					{
+						loadShedStatus[i] = 1; //SHED
+						break;
+					}
+				}
+				break;
+			default:
+				printf("invalid inst");
 			}
 
+			//push shed status to queue to send to led task
+			if(xQueueSend(xShedLoadStatusQueue, &loadShedStatus, 10) == pdTRUE)
+			{
+				printf("shedding status sent successfully! \n");
+			}
+		}
+
+		vTaskDelay(10);
+	}
+}
+
+
+
+void LEDController(void *pvParameters)
+{
+	unsigned int shedLoadStatus[5] = {0,0,0,0,0};
+	while(1)
+	{
+		if((uxQueueMessagesWaiting(xShedLoadStatusQueue) != 0) && (xQueueReceive(xShedLoadStatusQueue, &shedLoadStatus, 10) == pdTRUE))
+		{
+			printf("Shed Status is %d, %d, %d, %d, %d \n", shedLoadStatus[4],shedLoadStatus[3],shedLoadStatus[2],shedLoadStatus[1],shedLoadStatus[0]);
 		}
 		vTaskDelay(10);
 	}
+
 }
 
 

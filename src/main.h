@@ -38,9 +38,12 @@ unsigned int isMonitoring;
 TimerHandle_t unstableTimer500;
 TimerHandle_t stableTimer500;
 
+QueueHandle_t xShedLoadStatusQueue;
+
 
 void ControlCentre(void *pvParameters);
 void ManageLoad(void *pvParameters);
+void LEDController(void *pvParameters);
 void initTimers(void);
 
 #endif /* MAIN_H_ */
