@@ -4,10 +4,29 @@
 
 void TimerControl(void *pvParameters)
 {
+
+	int previousStatus = 3;
+
 	while(1)
 	{
+		//this task should't be scheduled until isMonitoring is true, refer to control center
 		if(isMonitoring)
 		{
+			if(global_unstableFlag != previousStatus)
+			{
+				if(xTimerReset(xTimer500, 9999) != pdPASS)
+				{
+					printf("cannot start 500 timer, current status is now: %d prev was: %d", global_unstableFlag, previousStatus);
+				}
+				else
+				{
+					//timer restart successfully
+					previousStatus = global_unstableFlag;
+				}
+			}
+
+
+			/*
 			//printf("in timer control");
 			if(global_unstableFlag == 1 && unstable_timer_running == 0)
 			{
@@ -24,9 +43,6 @@ void TimerControl(void *pvParameters)
 				stable_timer_running = 0;
 				unstable_timer_running = 1;
 
-				//or use semaphore
-				unstableTimerFlag = 0;
-				stableTimerFlag = 0;
 			}
 			else if( (global_unstableFlag == 0 && unstable_timer_running == 1))
 			{
@@ -45,10 +61,8 @@ void TimerControl(void *pvParameters)
 				stable_timer_running = 1;
 				unstable_timer_running = 0;
 
-				//or use semaphore
-				unstableTimerFlag = 0;
-				stableTimerFlag = 0;
 			}
+			*/
 		}
 		vTaskDelay(10);
 	}

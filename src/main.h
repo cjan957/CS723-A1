@@ -25,8 +25,6 @@
 
 unsigned int global_unstableFlag;
 
-unsigned int unstableTimerFlag;
-unsigned int stableTimerFlag;
 
 unsigned int stable_timer_running;
 unsigned int unstable_timer_running;
@@ -35,15 +33,18 @@ unsigned int unstableFlag; //stable = 0, unstable = 1
 unsigned int isMonitoring;
 
 //TIMERS
-TimerHandle_t unstableTimer500;
-TimerHandle_t stableTimer500;
+TimerHandle_t xTimer500;
 
 QueueHandle_t xShedLoadStatusQueue;
+QueueHandle_t xInstructionQueue;
+
+SemaphoreHandle_t xTimer500Semaphore;
 
 
 void ControlCentre(void *pvParameters);
 void ManageLoad(void *pvParameters);
 void LEDController(void *pvParameters);
 void initTimers(void);
+void initSemaphores(void);
 
 #endif /* MAIN_H_ */

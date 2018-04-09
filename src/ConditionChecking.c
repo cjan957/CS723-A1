@@ -25,6 +25,8 @@ void test() {
 
 void ConditionChecking(void *pvParameters)
 {
+	int shedInst = 1;
+
 	while(1)
 	{
 		while(uxQueueMessagesWaiting( xFreqQueue ) != 0){
@@ -33,21 +35,31 @@ void ConditionChecking(void *pvParameters)
 
 			freq[i] = freqValue;
 
-//			taskENTER_CRITICAL();
-//			printf("Frequency: %fHz\n", freqValue);
-//			taskEXIT_CRITICAL();
-
 			calculateROC();
 
 			//condition 1 checking ONLY
 			if(freqValue < condition1_freqencyThreshold)
 			{
-				xQueueSend(xStatusQueue, &unstable_status, 10);
+				//UNSTABLE
+
+				if(!isMonitoring)
+				{
+					//start monitoring, initially unstable (first time)
+					isMonitoring = 1;
+					if(xQueueSend(xInstructionQueue, &shedInst, 9999 ) != pdPASS)
+					{
+						printf("Failed to instrct to shed for the first time (frm condi checking)");
+					}
+					if(xTimerStart(xTimer500, 9999) != pdPASS)
+					{
+						printf("cannot start a timer");
+					}
+				}
+				//indicates that system is unstable
 				global_unstableFlag = 1;
 			}
 			else
 			{
-				xQueueSend(xStatusQueue, &stable_status, 10);
 				global_unstableFlag = 0;
 			}
 		}

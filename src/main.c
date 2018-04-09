@@ -10,7 +10,6 @@
 
 //QueueHandle_t xFreqQueue;
 //QueueHandle_t xStatusQueue;
-QueueHandle_t xInstructionQueue;
 
 // Definition of Semaphore
 SemaphoreHandle_t shared_resource_sem;
@@ -44,11 +43,10 @@ int main(int argc, char* argv[], char* envp[])
 	initCreateTasks();
 	initInterrupts();
 	initTimers();
+	initSemaphores();
 
 	global_unstableFlag = 0;
 
-	unstableTimerFlag = 0;
-	stableTimerFlag = 0;
 
 	stable_timer_running = 0;
 	unstable_timer_running = 0;
@@ -71,6 +69,15 @@ int main(int argc, char* argv[], char* envp[])
 	vTaskStartScheduler();
 	for (;;);
 	return 0;
+}
+
+void initSemaphores(void)
+{
+	xTimer500Semaphore = xSemaphoreCreateBinary();
+	if(xTimer500Semaphore == NULL)
+	{
+		printf("cant create semaphore");
+	}
 }
 
 void initInterrupts(void)
@@ -111,39 +118,66 @@ int initCreateTasks(void)
 	return 0;
 }
 
-void vUnstableTimerCallback(xTimerHandle t_timer)
-{
-	unstableTimerFlag = 1;
 
-}
-
-void vStableTimerCallback(xTimerHandle t_timer)
+void vTimer500Callback(xTimerHandle t_timer)
 {
-	stableTimerFlag = 1;
+	xSemaphoreGiveFromISR(xTimer500Semaphore, NULL);
 }
 
 
 void initTimers(void)
 {
-	unstableTimer500 = xTimerCreate("unstableTimer", 500, pdTRUE, NULL, vUnstableTimerCallback);
-	stableTimer500 = xTimerCreate("stableTimer", 500, pdTRUE, NULL, vStableTimerCallback);
+	xTimer500 = xTimerCreate("timer500", 500, pdTRUE, NULL, vTimer500Callback);
 }
 
 
 
 void ControlCentre(void *pvParameters)
 {
-	unsigned int isUnstable = 0;
+	int shedInst = 1;
+	int connectInst = 0;
 
 	while(1)
 	{
+
+//		if(!isMonitoring)
+//		{
+//			if(global_unstableFlag == 1)
+//			{
+//				xQu
+//			}
+//		} you will have to do this somewhere else
+		//above must be executed somewhere first, then schedule this task to run
+
+		//wait for semaphore which will be given by timerISR (500)
+		if(xSemaphoreTake(xTimer500Semaphore, 999999))
+		{
+			if(global_unstableFlag == 1) //unstable
+			{
+				//shed more
+				if(xQueueSend(xInstructionQueue, &shedInst, 9999 ) != pdPASS)
+				{
+					printf("Failed to instrct to shed (frm control cen");
+				}
+			}
+			else //stable
+			{
+				//connect more
+				if(xQueueSend(xInstructionQueue, &connectInst, 9999 ) != pdPASS)
+				{
+					printf("failed to instruct to connect (frm control cen)");
+				}
+			}
+		}
+
+/*
 		if(uxQueueMessagesWaiting( xStatusQueue ) != 0){
 
 			xQueueReceive( xStatusQueue, (void *) &isUnstable, 0 );
 
 			if(!isMonitoring)
 			{
-				if(isUnstable == 1)
+				if(isUnstable == 1) //unstable
 				{
 					//printf("initial unstable \n");
 					xQueueSend(xInstructionQueue, &isUnstable, 10);
@@ -157,20 +191,27 @@ void ControlCentre(void *pvParameters)
 				}
 			}
 			else{
-				if(isUnstable == 1 && unstableTimerFlag == 1)
+				if(isUnstable == 1 && unstableTimerFlag == 1) //unstable
 				{
 					//printf("unstable = %d \n", isUnstable);
-					xQueueSend(xInstructionQueue, &isUnstable, 10);
+					if(xQueueSend(xInstructionQueue, &isUnstable, 10) != pdPASS)
+					{
+						printf("cannot push shed to instructionQueue (frm control cen)");
+					}
 					unstableTimerFlag =0;
 				}
 				else if(isUnstable == 0 && stableTimerFlag == 1)
 				{
 					//printf("stable = %d \n", isUnstable);
-					xQueueSend(xInstructionQueue, &isUnstable, 10);
+					if(xQueueSend(xInstructionQueue, &isUnstable, 10) != pdPASS)
+					{
+						printf("cannot push connect to instructionQueue (frm control cen)");
+					}
 					stableTimerFlag = 0;
 				}
 			}
 		}
+*/
 		vTaskDelay(10);
 	}
 }
@@ -247,9 +288,9 @@ void ManageLoad(void *pvParameters)
 			}
 
 			//push shed status to queue to send to led task
-			if(xQueueSend(xShedLoadStatusQueue, &loadShedStatus, 10) == pdTRUE)
+			if(xQueueSend(xShedLoadStatusQueue, &loadShedStatus, 10) != pdTRUE)
 			{
-				printf("shedding status sent successfully! \n");
+				printf("shedding status of all loads was not sent! \n");
 			}
 		}
 
