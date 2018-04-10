@@ -4,6 +4,7 @@
 #include "TimerControl.h"
 #include "VGA.h"
 #include "Switches.h"
+#include "keyboard.h"
 
 // Definition of Task Stacks
 #define   TASK_STACKSIZE       2048
@@ -44,6 +45,23 @@ int main(int argc, char* argv[], char* envp[])
 	initCreateTasks();
 	initInterrupts();
 	initTimers();
+
+	// Keyboard
+	initKeyboard = 1;
+	keyboardFlag = 0;
+
+	alt_up_ps2_dev * ps2_device = alt_up_ps2_open_dev(PS2_NAME);
+
+	if(ps2_device == NULL){
+		printf("can't find PS/2 device\n");
+		return 1;
+	}
+
+	alt_up_ps2_clear_fifo (ps2_device) ;
+
+	alt_irq_register(PS2_IRQ, ps2_device, ps2_isr);
+	// register the PS/2 interrupt
+	IOWR_8DIRECT(PS2_BASE,4,1);
 
 	global_unstableFlag = 0;
 
@@ -90,6 +108,9 @@ int initOSDataStructs(void)
 	xSwitchPositionQueue = xQueueCreate(10, sizeof(unsigned int));
 
 	xShedLoadStatusQueue = xQueueCreate(10, sizeof(int[5]));
+
+	xKeyboardQueue = xQueueCreate(10, sizeof(keyInput));
+
 	//	shared_resource_sem = xSemaphoreCreateCounting( 9999, 1 );
 	return 0;
 }
@@ -105,6 +126,7 @@ int initCreateTasks(void)
 	//xTaskCreate(VGA_Draw, "VGA_Draw", 4096, NULL, 3, NULL);
 	xTaskCreate(SwitchRead, "SwitchRead", 1024, NULL, 1, NULL);
 	xTaskCreate(LEDController, "LEDController", 1024, NULL, 5, NULL);
+	xTaskCreate(keyboardProcessor, "Keyboard", 1024, NULL, 2, NULL);
 
 	//	xTaskCreate(Connector, "Connector", 1024, NULL, 2, NULL);
 	//xTaskCreate(LCDController, "LCDController", 1024, NULL, 8, NULL);
@@ -249,7 +271,7 @@ void ManageLoad(void *pvParameters)
 			//push shed status to queue to send to led task
 			if(xQueueSend(xShedLoadStatusQueue, &loadShedStatus, 10) == pdTRUE)
 			{
-				printf("shedding status sent successfully! \n");
+				//printf("shedding status sent successfully! \n");
 			}
 		}
 
@@ -266,7 +288,7 @@ void LEDController(void *pvParameters)
 	{
 		if((uxQueueMessagesWaiting(xShedLoadStatusQueue) != 0) && (xQueueReceive(xShedLoadStatusQueue, &shedLoadStatus, 10) == pdTRUE))
 		{
-			printf("Shed Status is %d, %d, %d, %d, %d \n", shedLoadStatus[4],shedLoadStatus[3],shedLoadStatus[2],shedLoadStatus[1],shedLoadStatus[0]);
+			//printf("Shed Status is %d, %d, %d, %d, %d \n", shedLoadStatus[4],shedLoadStatus[3],shedLoadStatus[2],shedLoadStatus[1],shedLoadStatus[0]);
 		}
 		vTaskDelay(10);
 	}

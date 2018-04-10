@@ -18,6 +18,8 @@
 #include "system.h"
 #include "io.h"
 
+#include "sys/alt_irq.h"
+
 //NIOS2
 #include "sys/alt_alarm.h"
 
@@ -33,6 +35,10 @@ unsigned int unstable_timer_running;
 
 unsigned int unstableFlag; //stable = 0, unstable = 1
 unsigned int isMonitoring;
+
+
+
+
 
 //TIMERS
 TimerHandle_t unstableTimer500;

@@ -1,9 +1,6 @@
 #include "ConditionChecking.h"
 #include "main.h"
 
-unsigned int condition1_freqencyThreshold = 50;
-unsigned int condition2_freqencyThreshold = 50;
-
 double freqValue;
 double ROC;
 
@@ -25,6 +22,10 @@ void test() {
 
 void ConditionChecking(void *pvParameters)
 {
+
+	condition1_freqencyThreshold = 50;
+	condition2_freqencyThreshold = 50;
+
 	while(1)
 	{
 		while(uxQueueMessagesWaiting( xFreqQueue ) != 0){

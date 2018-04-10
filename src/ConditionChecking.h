@@ -3,6 +3,9 @@
 
 #include "freq_relay.h"
 
+double condition1_freqencyThreshold;
+double condition2_freqencyThreshold;
+
 QueueHandle_t xStatusQueue;
 QueueHandle_t xROCQueue;
 

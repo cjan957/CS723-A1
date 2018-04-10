@@ -11,7 +11,7 @@ void TimerControl(void *pvParameters)
 			//printf("in timer control");
 			if(global_unstableFlag == 1 && unstable_timer_running == 0)
 			{
-				printf("first triggered \n");
+				//printf("first triggered \n");
 				//start timers
 				if(xTimerStart(unstableTimer500, 10) != pdPASS)
 				{
@@ -31,7 +31,7 @@ void TimerControl(void *pvParameters)
 			else if( (global_unstableFlag == 0 && unstable_timer_running == 1))
 			{
 				//start timers
-				printf("second triggered \n");
+				//printf("second triggered \n");
 
 				if(xTimerStart(stableTimer500, 10) != pdPASS)
 				{
