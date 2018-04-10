@@ -39,6 +39,14 @@ QueueHandle_t xShedLoadStatusQueue;
 QueueHandle_t xInstructionQueue;
 
 SemaphoreHandle_t xTimer500Semaphore;
+SemaphoreHandle_t xSwitchSemaphore;
+
+
+
+FILE* lcd;
+
+#define ESC 27
+#define CLEAR_LCD_STRING "[2J"
 
 
 void ControlCentre(void *pvParameters);

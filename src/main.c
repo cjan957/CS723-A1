@@ -25,6 +25,8 @@ FILE* lcd;
 
 unsigned int numberOfLoadConnected = 5;
 
+unsigned int currentSwitchValue = 0;
+
 
 // Local Function Prototypes
 int initOSDataStructs(void);
@@ -56,6 +58,9 @@ int main(int argc, char* argv[], char* envp[])
 
 	//turn it on initially
 	IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x1);
+	//get initial switch value
+	currentSwitchValue = IORD_ALTERA_AVALON_PIO_DATA(SLIDE_SWITCH_BASE);
+	IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, currentSwitchValue);
 	//shedSemaphore = xSemaphoreCreateBinary();
 	//connectSemaphore = xSemaphoreCreateBinary();
 
@@ -74,9 +79,10 @@ int main(int argc, char* argv[], char* envp[])
 void initSemaphores(void)
 {
 	xTimer500Semaphore = xSemaphoreCreateBinary();
-	if(xTimer500Semaphore == NULL)
+	xSwitchSemaphore = xSemaphoreCreateBinary();
+	if(xTimer500Semaphore == NULL || xSwitchSemaphore == NULL)
 	{
-		printf("cant create semaphore");
+		printf("cant create semaphore(s)");
 	}
 }
 
@@ -152,6 +158,7 @@ void ControlCentre(void *pvParameters)
 		//wait for semaphore which will be given by timerISR (500)
 		if(xSemaphoreTake(xTimer500Semaphore, 999999))
 		{
+			printf("time up 500 \n");
 			if(global_unstableFlag == 1) //unstable
 			{
 				//shed more
@@ -236,9 +243,10 @@ void ManageLoad(void *pvParameters)
 
 	while(1)
 	{
+		//TODO: is this ok? waiting for two queue in the same task?
 		//Check to see if there's any change to the switch value
 		//CHANGE TO PEEK!!!
-		if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueueReceive(xSwitchPositionQueue, &currentSwitchValue, 10) == pdTRUE))
+		if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueuePeek(xSwitchPositionQueue, &currentSwitchValue, 10) == pdTRUE))
 		{
 			for(i = 0; i < 5; i++)
 			{
@@ -255,6 +263,9 @@ void ManageLoad(void *pvParameters)
 			printf("Current Switch Position is %d, %d, %d, %d, %d \n", switchStatus[4],switchStatus[3],switchStatus[2],switchStatus[1],switchStatus[0]);
 		}
 
+		//once peeking of switch value is done, allows LEDs task to receive from the switchPositionqueue
+		xSemaphoreGive(xSwitchSemaphore);
+
 		//Check to see if there's any new instruction
 		if((uxQueueMessagesWaiting(xInstructionQueue) != 0) && (xQueueReceive(xInstructionQueue, &instruction, 10) == pdTRUE))
 		{
@@ -270,6 +281,14 @@ void ManageLoad(void *pvParameters)
 						break;
 					}
 				}
+
+				if(loadShedStatus[0] == 0 && loadShedStatus[1] == 0 && loadShedStatus[2] == 0 && loadShedStatus[3] == 0 && loadShedStatus[4] == 0)
+				{
+					taskENTER_CRITICAL();
+					isMonitoring = 0;
+					taskEXIT_CRITICAL();
+				}
+
 				break;
 			case 1: //shed
 				//Shed the load if it's hasn't been shed, based on the priority and whether
@@ -303,12 +322,51 @@ void ManageLoad(void *pvParameters)
 void LEDController(void *pvParameters)
 {
 	unsigned int shedLoadStatus[5] = {0,0,0,0,0};
+
+	int i;
+	unsigned int multiplier = 1;
+
+	unsigned int shedStatusBinary = 0;
+	unsigned int switchStatusBinary = 0;
+
+	int greenLEDs = 0;
+	int redLEDs = 0;
+
 	while(1)
 	{
+
+		//
+		xSemaphoreTake(xSwitchSemaphore, 10);
+		if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueueReceive(xSwitchPositionQueue, &switchStatusBinary, 10) == pdTRUE))
+		{
+			printf("switch values updated in LEDController!");
+			//redLEDs = switchStatusBinary;
+		}
+		xSemaphoreGive(xSwitchSemaphore);
+
 		if((uxQueueMessagesWaiting(xShedLoadStatusQueue) != 0) && (xQueueReceive(xShedLoadStatusQueue, &shedLoadStatus, 10) == pdTRUE))
 		{
+			shedStatusBinary = 0;
+			multiplier = 1;
+
+			for(i = 0; i < 5; i++)
+			{
+				shedStatusBinary += shedLoadStatus[i] * multiplier;
+				multiplier *= 2;
+			}
+
+			redLEDs = ~(shedStatusBinary & 0x1F);
+			redLEDs = redLEDs & switchStatusBinary;
+
 			printf("Shed Status is %d, %d, %d, %d, %d \n", shedLoadStatus[4],shedLoadStatus[3],shedLoadStatus[2],shedLoadStatus[1],shedLoadStatus[0]);
 		}
+
+		//printf("led status g: %d, r: %d \n", shedStatusBinary, redLEDs);
+
+
+		IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, redLEDs);
+		IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, shedStatusBinary);
+
 		vTaskDelay(10);
 	}
 
