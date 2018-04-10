@@ -47,14 +47,9 @@ void ConditionChecking(void *pvParameters)
 			if(freqValue < condition1_freqencyThreshold)
 			{
 				//UNSTABLE
-
-				if(!isMonitoring)
+				if(!isMonitoring && _currentSwitchValue != 0)
 				{
 					//start monitoring, initially unstable (first time)
-					taskENTER_CRITICAL();
-					isMonitoring = 1;
-					taskEXIT_CRITICAL();
-
 					if(xQueueSend(xInstructionQueue, &shedInst, 9999 ) != pdPASS)
 					{
 						printf("Failed to instrct to shed for the first time (frm condi checking)");

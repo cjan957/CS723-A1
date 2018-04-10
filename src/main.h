@@ -32,6 +32,8 @@ unsigned int unstable_timer_running;
 unsigned int unstableFlag; //stable = 0, unstable = 1
 unsigned int isMonitoring;
 
+unsigned int _currentSwitchValue;
+
 //TIMERS
 TimerHandle_t xTimer500;
 

@@ -25,7 +25,7 @@ FILE* lcd;
 
 unsigned int numberOfLoadConnected = 5;
 
-unsigned int currentSwitchValue = 0;
+
 
 
 // Local Function Prototypes
@@ -55,12 +55,13 @@ int main(int argc, char* argv[], char* envp[])
 
 	unstableFlag = 0; //stable = 0, unstable = 1
 	isMonitoring = 0;
+	_currentSwitchValue = 0;
 
 	//turn it on initially
 	IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x1);
 	//get initial switch value
-	currentSwitchValue = IORD_ALTERA_AVALON_PIO_DATA(SLIDE_SWITCH_BASE);
-	IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, currentSwitchValue);
+	_currentSwitchValue = IORD_ALTERA_AVALON_PIO_DATA(SLIDE_SWITCH_BASE);
+	IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, _currentSwitchValue);
 	//shedSemaphore = xSemaphoreCreateBinary();
 	//connectSemaphore = xSemaphoreCreateBinary();
 
@@ -146,15 +147,6 @@ void ControlCentre(void *pvParameters)
 	while(1)
 	{
 
-//		if(!isMonitoring)
-//		{
-//			if(global_unstableFlag == 1)
-//			{
-//				xQu
-//			}
-//		} you will have to do this somewhere else
-		//above must be executed somewhere first, then schedule this task to run
-
 		//wait for semaphore which will be given by timerISR (500)
 		if(xSemaphoreTake(xTimer500Semaphore, 999999))
 		{
@@ -176,49 +168,6 @@ void ControlCentre(void *pvParameters)
 				}
 			}
 		}
-
-/*
-		if(uxQueueMessagesWaiting( xStatusQueue ) != 0){
-
-			xQueueReceive( xStatusQueue, (void *) &isUnstable, 0 );
-
-			if(!isMonitoring)
-			{
-				if(isUnstable == 1) //unstable
-				{
-					//printf("initial unstable \n");
-					xQueueSend(xInstructionQueue, &isUnstable, 10);
-					isMonitoring = 1;
-					if(xTimerStart(unstableTimer500, 0) != pdPASS)
-					{
-						//printf("cannot start unstable timer");
-					}
-					unstable_timer_running = 1;
-					stable_timer_running = 0;
-				}
-			}
-			else{
-				if(isUnstable == 1 && unstableTimerFlag == 1) //unstable
-				{
-					//printf("unstable = %d \n", isUnstable);
-					if(xQueueSend(xInstructionQueue, &isUnstable, 10) != pdPASS)
-					{
-						printf("cannot push shed to instructionQueue (frm control cen)");
-					}
-					unstableTimerFlag =0;
-				}
-				else if(isUnstable == 0 && stableTimerFlag == 1)
-				{
-					//printf("stable = %d \n", isUnstable);
-					if(xQueueSend(xInstructionQueue, &isUnstable, 10) != pdPASS)
-					{
-						printf("cannot push connect to instructionQueue (frm control cen)");
-					}
-					stableTimerFlag = 0;
-				}
-			}
-		}
-*/
 		vTaskDelay(10);
 	}
 }
@@ -231,13 +180,17 @@ void ManageLoad(void *pvParameters)
 	//keep track of shedStatus of each load, 1 if load has been shed.
 	//index 0 = lowest priority, 5 = highest
 	unsigned int loadShedStatus[5] = {0,0,0,0,0};
-
 	unsigned int switchStatus[5] = {0,0,0,0,0};
 
 	//masking for each switch position
 	unsigned int masking[5] = {1,2,4,8,16};
 
 	unsigned int currentSwitchValue = 0;
+
+	unsigned int foundLoadNotShed = 0;
+	unsigned int foundLoadNotConnected = 0;
+
+	unsigned int temp;
 
 	int i = 0;
 
@@ -298,13 +251,44 @@ void ManageLoad(void *pvParameters)
 					if((loadShedStatus[i] == 0) && (switchStatus[i] == 1))
 					{
 						loadShedStatus[i] = 1; //SHED
+						taskENTER_CRITICAL();
+						isMonitoring = 1;
+						taskEXIT_CRITICAL();
 						break;
 					}
 				}
+
 				break;
 			default:
 				printf("invalid inst");
+				break;
 			}
+
+
+			/*
+			foundLoadNotShed = 0;
+			foundLoadNotConnected = 0;
+
+			//if all shedable loads have been shed, stop timer 500
+			for(i = 0; i < 5; i++)
+			{
+				temp = loadShedStatus[i];
+				if (switchStatus[i] == 1) {
+					if (temp) {
+						foundLoadNotConnected = 1;
+					}
+					else {
+						foundLoadNotShed = 1;
+					}
+				}
+			}
+
+			if(!foundLoadNotShed || !foundLoadNotConnected)
+			{
+				foundLoadNotShed = 0;
+				xTimerStop(xTimer500, 500);
+			}
+			*/
 
 			//push shed status to queue to send to led task
 			if(xQueueSend(xShedLoadStatusQueue, &loadShedStatus, 10) != pdTRUE)
@@ -330,7 +314,7 @@ void LEDController(void *pvParameters)
 	unsigned int switchStatusBinary = 0;
 
 	int greenLEDs = 0;
-	int redLEDs = 0;
+	int redLEDs = _currentSwitchValue;
 
 	while(1)
 	{
@@ -339,7 +323,7 @@ void LEDController(void *pvParameters)
 		xSemaphoreTake(xSwitchSemaphore, 10);
 		if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueueReceive(xSwitchPositionQueue, &switchStatusBinary, 10) == pdTRUE))
 		{
-			printf("switch values updated in LEDController!");
+			printf("switch values updated in LEDController! \n");
 			//redLEDs = switchStatusBinary;
 		}
 		xSemaphoreGive(xSwitchSemaphore);
@@ -357,6 +341,7 @@ void LEDController(void *pvParameters)
 
 			redLEDs = ~(shedStatusBinary & 0x1F);
 			redLEDs = redLEDs & switchStatusBinary;
+			redLEDs = redLEDs & 0x1F; //ignore all switches other than 0-4 switches
 
 			printf("Shed Status is %d, %d, %d, %d, %d \n", shedLoadStatus[4],shedLoadStatus[3],shedLoadStatus[2],shedLoadStatus[1],shedLoadStatus[0]);
 		}
