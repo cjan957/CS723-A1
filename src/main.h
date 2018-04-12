@@ -42,6 +42,7 @@ QueueHandle_t xInstructionQueue;
 
 SemaphoreHandle_t xTimer500Semaphore;
 SemaphoreHandle_t xSwitchSemaphore;
+SemaphoreHandle_t xButtonSemaphore;
 
 
 
@@ -54,6 +55,7 @@ FILE* lcd;
 void ControlCentre(void *pvParameters);
 void ManageLoad(void *pvParameters);
 void LEDController(void *pvParameters);
+void MaintenanceMode(void *pvParameters);
 void initTimers(void);
 void initSemaphores(void);
 

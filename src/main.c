@@ -81,16 +81,28 @@ void initSemaphores(void)
 {
 	xTimer500Semaphore = xSemaphoreCreateBinary();
 	xSwitchSemaphore = xSemaphoreCreateBinary();
-	if(xTimer500Semaphore == NULL || xSwitchSemaphore == NULL)
+	xButtonSemaphore = xSemaphoreCreateBinary();
+	if(xTimer500Semaphore == NULL || xSwitchSemaphore == NULL || xButtonSemaphore == NULL)
 	{
 		printf("cant create semaphore(s)");
 	}
 }
 
+void maintenance_button_int(void* context, alt_u32 id)
+{
+	xSemaphoreGiveFromISR(xButtonSemaphore, NULL);
+	IOWR_ALTERA_AVALON_PIO_EDGE_CAP(PUSH_BUTTON_BASE, 0x7);
+}
+
+
 void initInterrupts(void)
 {
+	IOWR_ALTERA_AVALON_PIO_EDGE_CAP(PUSH_BUTTON_BASE, 0x7);
+	IOWR_ALTERA_AVALON_PIO_IRQ_MASK(PUSH_BUTTON_BASE, 0x1);
+	alt_irq_register(PUSH_BUTTON_IRQ, NULL, maintenance_button_int);
 	alt_irq_register(FREQUENCY_ANALYSER_IRQ, 0, freq_relay);
 }
+
 
 // This function simply creates a message queue and a semaphore
 int initOSDataStructs(void)
@@ -117,8 +129,9 @@ int initCreateTasks(void)
 	xTaskCreate(ControlCentre, "ControlCentre", 1024, NULL, 7, NULL);
 	xTaskCreate(ManageLoad, "ManageLoad", 1024, NULL, 6, NULL);
 	//xTaskCreate(VGA_Draw, "VGA_Draw", 4096, NULL, 3, NULL);
-	xTaskCreate(SwitchRead, "SwitchRead", 1024, NULL, 1, NULL);
+	xTaskCreate(SwitchRead, "SwitchRead", 1024, NULL, 2, NULL);
 	xTaskCreate(LEDController, "LEDController", 1024, NULL, 5, NULL);
+	xTaskCreate(MaintenanceMode,"maintenanceMode",512, NULL, 1, NULL);
 
 	//	xTaskCreate(Connector, "Connector", 1024, NULL, 2, NULL);
 	//xTaskCreate(LCDController, "LCDController", 1024, NULL, 8, NULL);
@@ -137,6 +150,45 @@ void initTimers(void)
 	xTimer500 = xTimerCreate("timer500", 500, pdTRUE, NULL, vTimer500Callback);
 }
 
+void MaintenanceMode(void *pvParameters)
+{
+	int isMaintenanceMode = 0;
+	while(1)
+	{
+		if(xSemaphoreTake(xButtonSemaphore, portMAX_DELAY))
+		{
+
+			printf("intterupt in task received \n");
+
+//			printf("sdklajklf \n");
+//			if(isMaintenanceMode == 0)
+//			{
+//				printf("dead");
+//				vTaskSuspend(TimerControl);
+//				vTaskSuspend(ConditionChecking);
+//				vTaskSuspend(ControlCentre);
+//				vTaskSuspend(ManageLoad);
+//				vTaskSuspend(SwitchRead);
+//				vTaskSuspend(LEDController);
+//				isMaintenanceMode = 1;
+//			}
+//			else
+//			{
+//				vTaskResume(TimerControl);
+//				vTaskResume(ConditionChecking);
+//				vTaskResume(ControlCentre);
+//				vTaskResume(ManageLoad);
+//				vTaskResume(SwitchRead);
+//				vTaskResume(LEDController);
+//				printf("alive");
+//				isMaintenanceMode = 0;
+//
+//				//vTaskStartScheduler();
+//			}
+		}
+		vTaskDelay(10);
+	}
+}
 
 
 void ControlCentre(void *pvParameters)
