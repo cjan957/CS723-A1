@@ -5,6 +5,10 @@
 
 void VGA_Draw(void *pvParameters) {
 
+
+	char cond1[10];
+	char cond2[10];
+
 	//initialize VGA controllers
 	alt_up_pixel_buffer_dma_dev *pixel_buf;
 	pixel_buf = alt_up_pixel_buffer_dma_open_dev(VIDEO_PIXEL_BUFFER_DMA_NAME);
@@ -44,6 +48,8 @@ void VGA_Draw(void *pvParameters) {
 	alt_up_char_buffer_string(char_buf, "-60", 9, 36);
 
 
+
+
 	double freq[100], dfreq[100];
 	int i = 99, j = 0;
 	Line line_freq, line_roc;
@@ -77,6 +83,16 @@ void VGA_Draw(void *pvParameters) {
 		//clear old graph to draw new graph
 		alt_up_pixel_buffer_dma_draw_box(pixel_buf, 101, 0, 639, 199, 0, 0);
 		alt_up_pixel_buffer_dma_draw_box(pixel_buf, 101, 201, 639, 299, 0, 0);
+
+		sprintf(cond1, "%f", condition1_freqencyThreshold);
+		sprintf(cond2, "%f", condition2_freqencyThreshold);
+
+		alt_up_char_buffer_string(char_buf, "Frequency Threshold: ", 7, 40);
+		alt_up_char_buffer_string(char_buf, cond1, 30, 40);
+
+		alt_up_char_buffer_string(char_buf, "ROC Threshold: ", 7, 42);
+		alt_up_char_buffer_string(char_buf, cond2, 30, 42);
+
 
 		for(j=0;j<99;++j){ //i here points to the oldest data, j loops through all the data to be drawn on VGA
 			if (((int)(freq[(i+j)%100]) > MIN_FREQ) && ((int)(freq[(i+j+1)%100]) > MIN_FREQ)){

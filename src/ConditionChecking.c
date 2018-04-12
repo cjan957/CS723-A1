@@ -24,7 +24,7 @@ void ConditionChecking(void *pvParameters)
 {
 
 	condition1_freqencyThreshold = 50;
-	condition2_freqencyThreshold = 50;
+	condition2_freqencyThreshold = 7;
 
 	while(1)
 	{
@@ -34,14 +34,10 @@ void ConditionChecking(void *pvParameters)
 
 			freq[i] = freqValue;
 
-//			taskENTER_CRITICAL();
-//			printf("Frequency: %fHz\n", freqValue);
-//			taskEXIT_CRITICAL();
-
 			calculateROC();
 
 			//condition 1 checking ONLY
-			if(freqValue < condition1_freqencyThreshold)
+			if( (freqValue < condition1_freqencyThreshold) || (dfreq[i] < condition1_freqencyThreshold))
 			{
 				xQueueSend(xStatusQueue, &unstable_status, 10);
 				global_unstableFlag = 1;
@@ -52,7 +48,7 @@ void ConditionChecking(void *pvParameters)
 				global_unstableFlag = 0;
 			}
 		}
-		//test();
+
 		vTaskDelay(10);
 	}
 }

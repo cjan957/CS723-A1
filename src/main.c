@@ -123,7 +123,7 @@ int initCreateTasks(void)
 	xTaskCreate(ConditionChecking, "ConditionChecking", 1024, NULL, 9, NULL);
 	xTaskCreate(ControlCentre, "ControlCentre", 1024, NULL, 7, NULL);
 	xTaskCreate(ManageLoad, "ManageLoad", 1024, NULL, 6, NULL);
-	//xTaskCreate(VGA_Draw, "VGA_Draw", 4096, NULL, 3, NULL);
+	xTaskCreate(VGA_Draw, "VGA_Draw", 4096, NULL, 3, NULL);
 	xTaskCreate(SwitchRead, "SwitchRead", 1024, NULL, 1, NULL);
 	xTaskCreate(LEDController, "LEDController", 1024, NULL, 5, NULL);
 	xTaskCreate(keyboardProcessor, "Keyboard", 1024, NULL, 2, NULL);
