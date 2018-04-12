@@ -43,8 +43,8 @@ void ConditionChecking(void *pvParameters)
 			fprintf(lcd, "Freq: %f \n isManaging: %d ", freqValue, isMonitoring);
 			fclose(lcd);
 
-			//Checking
-			if( (freqValue < condition1_freqencyThreshold) || (dfreq[i] < condition2_freqencyThreshold))
+			//Checking (should be absolute)
+			if( (freqValue < condition1_freqencyThreshold) )// || (dfreq[i] < condition2_freqencyThreshold))
 			{
 				//UNSTABLE
 				if(!isMonitoring && _currentSwitchValue != 0)

@@ -47,8 +47,12 @@ void VGA_Draw(void *pvParameters) {
 	alt_up_char_buffer_string(char_buf, "-30", 9, 34);
 	alt_up_char_buffer_string(char_buf, "-60", 9, 36);
 
+	alt_up_char_buffer_string(char_buf, "Frequency Threshold: ", 7, 40);
+	alt_up_char_buffer_string(char_buf, "ROC Threshold: ", 7, 42);
+	alt_up_char_buffer_string(char_buf, "Last 5 Results: ", 7, 44);
+	alt_up_char_buffer_string(char_buf, "Last 5 Results: ", 7, 44);
 
-
+	//Loads,Status, System Time
 
 	double freq[100], dfreq[100];
 	int i = 99, j = 0;
@@ -87,10 +91,8 @@ void VGA_Draw(void *pvParameters) {
 		sprintf(cond1, "%f", condition1_freqencyThreshold);
 		sprintf(cond2, "%f", condition2_freqencyThreshold);
 
-		alt_up_char_buffer_string(char_buf, "Frequency Threshold: ", 7, 40);
-		alt_up_char_buffer_string(char_buf, cond1, 30, 40);
 
-		alt_up_char_buffer_string(char_buf, "ROC Threshold: ", 7, 42);
+		alt_up_char_buffer_string(char_buf, cond1, 30, 40);
 		alt_up_char_buffer_string(char_buf, cond2, 30, 42);
 
 
