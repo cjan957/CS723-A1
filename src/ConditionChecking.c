@@ -25,6 +25,8 @@ void ConditionChecking(void *pvParameters)
 
 	condition1_freqencyThreshold = 50;
 	condition2_freqencyThreshold = 7;
+	int shedInst = 1;
+
 
 	while(1)
 	{
@@ -36,15 +38,32 @@ void ConditionChecking(void *pvParameters)
 
 			calculateROC();
 
-			//condition 1 checking ONLY
-			if( (freqValue < condition1_freqencyThreshold) || (dfreq[i] < condition1_freqencyThreshold))
+			lcd = fopen(CHARACTER_LCD_NAME, "w");
+			fprintf(lcd, "%c%s", ESC, CLEAR_LCD_STRING);
+			fprintf(lcd, "Freq: %f \n isManaging: %d ", freqValue, isMonitoring);
+			fclose(lcd);
+
+			//Checking
+			if( (freqValue < condition1_freqencyThreshold) || (dfreq[i] < condition2_freqencyThreshold))
 			{
-				xQueueSend(xStatusQueue, &unstable_status, 10);
+				//UNSTABLE
+				if(!isMonitoring && _currentSwitchValue != 0)
+				{
+					//start monitoring, initially unstable (first time)
+					if(xQueueSend(xInstructionQueue, &shedInst, 9999 ) != pdPASS)
+					{
+						printf("Failed to instrct to shed for the first time (frm condi checking)");
+					}
+					if(xTimerStart(xTimer500, 9999) != pdPASS)
+					{
+						printf("cannot start a timer");
+					}
+				}
+				//indicates that system is unstable
 				global_unstableFlag = 1;
 			}
 			else
 			{
-				xQueueSend(xStatusQueue, &stable_status, 10);
 				global_unstableFlag = 0;
 			}
 		}

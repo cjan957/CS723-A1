@@ -4,50 +4,27 @@
 
 void TimerControl(void *pvParameters)
 {
+
+	int previousStatus = 3;
+
 	while(1)
 	{
+		//this task should't be scheduled until isMonitoring is true, refer to control center
 		if(isMonitoring)
 		{
-			//printf("in timer control");
-			if(global_unstableFlag == 1 && unstable_timer_running == 0)
+			if(global_unstableFlag != previousStatus)
 			{
-				//printf("first triggered \n");
-				//start timers
-				if(xTimerStart(unstableTimer500, 10) != pdPASS)
-				{
-					printf("cannot start UNstable timer");
-				}
-				if(xTimerStop(stableTimer500, 10) != pdPASS)
-				{
-					printf("cannot stop stable timer");
-				}
-				stable_timer_running = 0;
-				unstable_timer_running = 1;
 
-				//or use semaphore
-				unstableTimerFlag = 0;
-				stableTimerFlag = 0;
-			}
-			else if( (global_unstableFlag == 0 && unstable_timer_running == 1))
-			{
-				//start timers
-				//printf("second triggered \n");
-
-				if(xTimerStart(stableTimer500, 10) != pdPASS)
+				printf("prev: %d, now: %d \n", previousStatus, global_unstableFlag);
+				if(xTimerReset(xTimer500, 9999) != pdPASS)
 				{
-					printf("cannot start stable timer");
+					printf("cannot start 500 timer, current status is now: %d prev was: %d", global_unstableFlag, previousStatus);
 				}
-				if(xTimerStop(unstableTimer500, 10) != pdPASS)
+				else
 				{
-					printf("cannot stop UNstable timer");
+					//timer restart successfully
+					previousStatus = global_unstableFlag;
 				}
-
-				stable_timer_running = 1;
-				unstable_timer_running = 0;
-
-				//or use semaphore
-				unstableTimerFlag = 0;
-				stableTimerFlag = 0;
 			}
 		}
 		vTaskDelay(10);
