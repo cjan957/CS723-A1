@@ -25,6 +25,6 @@ void ps2_isr (void* context, alt_u32 id);
 void keyboardProcessor(void *pvParameters);
 
 QueueHandle_t xKeyboardQueue;
-SemaphoreHandle_t keyboardSemaphore;
+SemaphoreHandle_t xKeyboardSemaphore;
 
 #endif /* KEYBOARD_H_ */

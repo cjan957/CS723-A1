@@ -16,8 +16,9 @@ void SwitchRead (void *pvParameters)
 	{
 		//Read switch from IO // Polling
 		currentSwitchValue = IORD_ALTERA_AVALON_PIO_DATA(SLIDE_SWITCH_BASE);
-		currentSwitchValue = currentSwitchValue & 0x1F;
+		currentSwitchValue = currentSwitchValue & 0x1F; //masking
 		_currentSwitchValue = currentSwitchValue;
+
 		if(currentSwitchValue == 0)
 		{
 			taskENTER_CRITICAL();

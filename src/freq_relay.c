@@ -9,6 +9,8 @@ void freq_relay(){
 	xQueueSendToBackFromISR( xFreqQueue, &temp, pdFALSE );
 	xQueueSendToBackFromISR( xDispFreqQueue, &temp, pdFALSE );
 
+	xSemaphoreGiveFromISR(xConditionSemaphore, pdFALSE);
+
 	return;
 }
 

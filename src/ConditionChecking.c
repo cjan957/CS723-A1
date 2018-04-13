@@ -1,5 +1,6 @@
 #include "ConditionChecking.h"
 #include "main.h"
+#include "math.h"
 
 double freqValue;
 double ROC;
@@ -10,65 +11,80 @@ unsigned int stable_status = 0;
 double freq[100], dfreq[100];
 int i = 99, j = 0;
 
-void test() {
-
-	xQueueReceive( xROCQueue, (void *) &ROC, 0 );
-
-//	taskENTER_CRITICAL();
-//	printf("Value: %f\n", ROC);
-//	taskEXIT_CRITICAL();
-}
-
 
 void ConditionChecking(void *pvParameters)
 {
 
-	condition1_freqencyThreshold = 50;
-	condition2_freqencyThreshold = 7;
+	condition1_freqencyThreshold = 49;
+	condition2_freqencyThreshold = 10;
 	int shedInst = 1;
 
+	int stopLCDReWriting = 0;
 
+	// TODO: Change to binary semaphore
 	while(1)
 	{
-		while(uxQueueMessagesWaiting( xFreqQueue ) != 0){
+		if( xSemaphoreTake( xConditionSemaphore,10) == pdTRUE )
+		{
+			stopLCDReWriting = 0;
+			while(uxQueueMessagesWaiting( xFreqQueue ) != 0){
 
-			xQueueReceive( xFreqQueue, (void *) &freqValue, 0 );
+				//xTimerStart(xTimer500, 9999);
 
-			freq[i] = freqValue;
+				xQueueReceive( xFreqQueue, (void *) &freqValue, portMAX_DELAY );
 
-			calculateROC();
+				freq[i] = freqValue;
 
-			lcd = fopen(CHARACTER_LCD_NAME, "w");
-			fprintf(lcd, "%c%s", ESC, CLEAR_LCD_STRING);
-			fprintf(lcd, "Freq: %f \n isManaging: %d ", freqValue, isMonitoring);
-			fclose(lcd);
+				calculateROC();
 
-			//Checking (should be absolute)
-			if( (freqValue < condition1_freqencyThreshold) )// || (dfreq[i] < condition2_freqencyThreshold))
-			{
-				//UNSTABLE
-				if(!isMonitoring && _currentSwitchValue != 0)
+				if(_maintenanceMode)
 				{
-					//start monitoring, initially unstable (first time)
-					if(xQueueSend(xInstructionQueue, &shedInst, 9999 ) != pdPASS)
+					if(!stopLCDReWriting)
 					{
-						printf("Failed to instrct to shed for the first time (frm condi checking)");
+						lcd = fopen(CHARACTER_LCD_NAME, "w");
+						fprintf(lcd, "%c%s", ESC, CLEAR_LCD_STRING);
+						fprintf(lcd, "Maintenance");
+						fclose(lcd);
+						stopLCDReWriting = 1;
 					}
-					if(xTimerStart(xTimer500, 9999) != pdPASS)
-					{
-						printf("cannot start a timer");
+				} else
+				{
+
+					lcd = fopen(CHARACTER_LCD_NAME, "w");
+					fprintf(lcd, "%c%s", ESC, CLEAR_LCD_STRING);
+					fprintf(lcd, "Freq: %f \n isMonitoring: %d ", freqValue, isMonitoring);
+					fclose(lcd);
+				}
+
+				if( (freqValue < condition1_freqencyThreshold)  || (fabs(dfreq[i]) > condition2_freqencyThreshold))
+				{
+
+					if(!_maintenanceMode) {
+						//UNSTABLE
+						if(!isMonitoring && _currentSwitchValue != 0)
+						{
+							//start monitoring, initially unstable (first time)
+							if(xQueueSend(xInstructionQueue, &shedInst, 9999 ) != pdPASS)
+							{
+								printf("Failed to instrct to shed for the first time (frm condi checking)");
+							}
+							if(xTimerStart(xTimer500, 9999) != pdPASS)
+							{
+								printf("cannot start a timer");
+							}
+						}
+						//indicates that system is unstable
+						global_unstableFlag = 1;
 					}
 				}
-				//indicates that system is unstable
-				global_unstableFlag = 1;
-			}
-			else
-			{
-				global_unstableFlag = 0;
+				else
+				{
+					global_unstableFlag = 0;
+				}
 			}
 		}
 
-		vTaskDelay(10);
+
 	}
 }
 
@@ -88,7 +104,6 @@ void calculateROC() {
 	}
 
 	xQueueSend(xROCQueue, &dfreq[i], 0);
-
 
 	i =	++i%100;
 

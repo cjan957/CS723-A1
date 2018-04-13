@@ -35,10 +35,22 @@ unsigned int unstableFlag; //stable = 0, unstable = 1
 unsigned int isMonitoring;
 
 unsigned int _currentSwitchValue;
+unsigned int _timerSinceStartup;
+
+unsigned int _maintenanceMode;
+
+// System time
+unsigned int _systemTime;
+unsigned int _timeDiff;
+unsigned int _maxTime;
+unsigned int _minTime;
+unsigned int _avgTime;
 
 
 //TIMERS
 TimerHandle_t xTimer500;
+TimerHandle_t xSystemTime;
+TimerHandle_t xTimeDiff;
 
 QueueHandle_t xShedLoadStatusQueue;
 QueueHandle_t xInstructionQueue;
@@ -48,17 +60,14 @@ SemaphoreHandle_t xSwitchSemaphore;
 SemaphoreHandle_t xButtonSemaphore;
 
 
-
 FILE* lcd;
 
 #define ESC 27
 #define CLEAR_LCD_STRING "[2J"
 
-
 void ControlCentre(void *pvParameters);
 void ManageLoad(void *pvParameters);
 void LEDController(void *pvParameters);
-void MaintenanceMode(void *pvParameters);
 void initTimers(void);
 void initSemaphores(void);
 

@@ -14,8 +14,7 @@ void TimerControl(void *pvParameters)
 		{
 			if(global_unstableFlag != previousStatus)
 			{
-
-				printf("prev: %d, now: %d \n", previousStatus, global_unstableFlag);
+				//printf("status changed (from timercontrol) \n");
 				if(xTimerReset(xTimer500, 9999) != pdPASS)
 				{
 					printf("cannot start 500 timer, current status is now: %d prev was: %d", global_unstableFlag, previousStatus);
@@ -25,6 +24,10 @@ void TimerControl(void *pvParameters)
 					//timer restart successfully
 					previousStatus = global_unstableFlag;
 				}
+
+				// Reset the time difference timer
+				//_timeDiff = 0;
+				//xTimerReset(xTimeDiff,9999);
 			}
 		}
 		vTaskDelay(10);

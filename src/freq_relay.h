@@ -19,6 +19,8 @@
 QueueHandle_t xFreqQueue;
 QueueHandle_t xDispFreqQueue;
 
+SemaphoreHandle_t xConditionSemaphore;
+
 void freq_relay();
 
 

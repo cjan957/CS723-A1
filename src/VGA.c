@@ -9,6 +9,10 @@ void VGA_Draw(void *pvParameters) {
 	char cond1[10];
 	char cond2[10];
 
+	char sysTime[5];
+
+	char timeDiff[10];
+
 	//initialize VGA controllers
 	alt_up_pixel_buffer_dma_dev *pixel_buf;
 	pixel_buf = alt_up_pixel_buffer_dma_open_dev(VIDEO_PIXEL_BUFFER_DMA_NAME);
@@ -50,11 +54,18 @@ void VGA_Draw(void *pvParameters) {
 	alt_up_char_buffer_string(char_buf, "Frequency Threshold: ", 7, 40);
 	alt_up_char_buffer_string(char_buf, "ROC Threshold: ", 7, 42);
 	alt_up_char_buffer_string(char_buf, "Last 5 Results: ", 7, 44);
-	alt_up_char_buffer_string(char_buf, "Last 5 Results: ", 7, 44);
+	alt_up_char_buffer_string(char_buf, "System Status", 7, 46);
 
-	//Loads,Status, System Time
+	alt_up_char_buffer_string(char_buf, "Maximum Time: ", 7, 48);
+	alt_up_char_buffer_string(char_buf, "Minimum Time: ", 7, 50);
+	alt_up_char_buffer_string(char_buf, "Average Time: ", 7, 52);
+
+	alt_up_char_buffer_string(char_buf, "Time: " ,53, 1);
+	alt_up_char_buffer_string(char_buf, "s" ,63, 1);
+
 
 	double freq[100], dfreq[100];
+	double ROC;
 	int i = 99, j = 0;
 	Line line_freq, line_roc;
 
@@ -63,25 +74,8 @@ void VGA_Draw(void *pvParameters) {
 		//receive frequency data from queue
 		while(uxQueueMessagesWaiting(xDispFreqQueue) != 0){
 			xQueueReceive(xDispFreqQueue, freq+i, 0 );
-			//xQueueReceive( xROCQueue, (void *) &dfreq, 0 );
-			//xQueueReceive(xROCQueue, dfreq, 0 );
-
-			//calculate frequency RoC
-
-			if(i==0){
-				dfreq[0] = (freq[0]-freq[99]) * 2.0 * freq[0] * freq[99] / (freq[0]+freq[99]);
-			}
-			else{
-				dfreq[i] = (freq[i]-freq[i-1]) * 2.0 * freq[i]* freq[i-1] / (freq[i]+freq[i-1]);
-			}
-
-			if (dfreq[i] > 100.0){
-				dfreq[i] = 100.0;
-			}
-
-
+			xQueueReceive(xROCQueue, dfreq+i, 0 );
 			i =	++i%100; //point to the next data (oldest) to be overwritten
-
 		}
 
 		//clear old graph to draw new graph
@@ -91,9 +85,20 @@ void VGA_Draw(void *pvParameters) {
 		sprintf(cond1, "%f", condition1_freqencyThreshold);
 		sprintf(cond2, "%f", condition2_freqencyThreshold);
 
+		sprintf(sysTime, "%d", _systemTime);
+		sprintf(timeDiff, "%d", _timeDiff);
+
 
 		alt_up_char_buffer_string(char_buf, cond1, 30, 40);
 		alt_up_char_buffer_string(char_buf, cond2, 30, 42);
+
+		if(!global_unstableFlag) {
+			alt_up_char_buffer_string(char_buf, "Stable  ", 30, 46);
+		} else {
+			alt_up_char_buffer_string(char_buf, "Unstable", 30, 46);
+		}
+
+		alt_up_char_buffer_string(char_buf, sysTime,60, 1);
 
 
 		for(j=0;j<99;++j){ //i here points to the oldest data, j loops through all the data to be drawn on VGA

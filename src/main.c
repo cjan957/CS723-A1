@@ -19,14 +19,13 @@ SemaphoreHandle_t shared_resource_sem;
 SemaphoreHandle_t shedSemaphore;
 SemaphoreHandle_t connectSemaphore;
 
+
 FILE* lcd;
 
 #define ESC 27
 #define CLEAR_LCD_STRING "[2J"
 
 unsigned int numberOfLoadConnected = 5;
-
-
 
 
 // Local Function Prototypes
@@ -39,6 +38,9 @@ void initInterrupts(void);
 
 const TickType_t delay50ms = 50/ portTICK_PERIOD_MS;
 const TickType_t delay10ms = 10/ portTICK_PERIOD_MS;
+const TickType_t delay500ms = 500/ portTICK_PERIOD_MS;
+
+const TickType_t delay1s = 1000/ portTICK_PERIOD_MS;
 
 int main(int argc, char* argv[], char* envp[])
 {
@@ -51,6 +53,8 @@ int main(int argc, char* argv[], char* envp[])
 	// Keyboard
 	initKeyboard = 1;
 	keyboardFlag = 0;
+
+	_systemTime = 0;
 
 	alt_up_ps2_dev * ps2_device = alt_up_ps2_open_dev(PS2_NAME);
 
@@ -67,7 +71,6 @@ int main(int argc, char* argv[], char* envp[])
 
 	global_unstableFlag = 0;
 
-
 	stable_timer_running = 0;
 	unstable_timer_running = 0;
 
@@ -77,18 +80,10 @@ int main(int argc, char* argv[], char* envp[])
 
 	//turn it on initially
 	IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x1);
+
 	//get initial switch value
 	_currentSwitchValue = IORD_ALTERA_AVALON_PIO_DATA(SLIDE_SWITCH_BASE);
 	IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, _currentSwitchValue);
-	//shedSemaphore = xSemaphoreCreateBinary();
-	//connectSemaphore = xSemaphoreCreateBinary();
-
-	//	if(shedSemaphore == NULL || connectSemaphore == NULL)
-	//	{
-	//		taskENTER_CRITICAL();
-	//		printf("Insufficient heap to create semaphores");
-	//		taskEXIT_CRITICAL();
-	//	}
 
 	vTaskStartScheduler();
 	for (;;);
@@ -100,6 +95,8 @@ void initSemaphores(void)
 	xTimer500Semaphore = xSemaphoreCreateBinary();
 	xSwitchSemaphore = xSemaphoreCreateBinary();
 	xButtonSemaphore = xSemaphoreCreateBinary();
+	xKeyboardSemaphore = xSemaphoreCreateBinary();
+	xConditionSemaphore = xSemaphoreCreateBinary();
 	if(xTimer500Semaphore == NULL || xSwitchSemaphore == NULL || xButtonSemaphore == NULL)
 	{
 		printf("cant create semaphore(s)");
@@ -108,7 +105,8 @@ void initSemaphores(void)
 
 void maintenance_button_int(void* context, alt_u32 id)
 {
-	xSemaphoreGiveFromISR(xButtonSemaphore, NULL);
+	_maintenanceMode = !_maintenanceMode;
+	//xSemaphoreGiveFromISR(xButtonSemaphore, NULL);
 	IOWR_ALTERA_AVALON_PIO_EDGE_CAP(PUSH_BUTTON_BASE, 0x7);
 }
 
@@ -132,12 +130,9 @@ int initOSDataStructs(void)
 	xInstructionQueue = xQueueCreate(100, sizeof(unsigned int ));
 	xROCQueue = xQueueCreate(100, sizeof(double));
 	xSwitchPositionQueue = xQueueCreate(10, sizeof(unsigned int));
-
 	xShedLoadStatusQueue = xQueueCreate(10, sizeof(int[5]));
+	//xKeyboardQueue = xQueueCreate(10, sizeof(keyInput));
 
-	xKeyboardQueue = xQueueCreate(10, sizeof(keyInput));
-
-	//	shared_resource_sem = xSemaphoreCreateCounting( 9999, 1 );
 	return 0;
 }
 
@@ -154,10 +149,7 @@ int initCreateTasks(void)
 	xTaskCreate(SwitchRead, "SwitchRead", 1024, NULL, 1, NULL);
 	xTaskCreate(LEDController, "LEDController", 1024, NULL, 5, NULL);
 	xTaskCreate(keyboardProcessor, "Keyboard", 1024, NULL, 2, NULL);
-	xTaskCreate(MaintenanceMode,"maintenanceMode",512, NULL, 1, NULL);
 
-	//	xTaskCreate(Connector, "Connector", 1024, NULL, 2, NULL);
-	//xTaskCreate(LCDController, "LCDController", 1024, NULL, 8, NULL);
 	return 0;
 }
 
@@ -167,50 +159,25 @@ void vTimer500Callback(xTimerHandle t_timer)
 	xSemaphoreGiveFromISR(xTimer500Semaphore, NULL);
 }
 
+void vSystemTimeCallback(xTimerHandle t_timer)
+{
+	_systemTime++;
+}
+
+void vTimeDiffCallback(xTimerHandle t_timer)
+{
+	_timeDiff++;
+}
+
 
 void initTimers(void)
 {
-	xTimer500 = xTimerCreate("timer500", 500, pdTRUE, NULL, vTimer500Callback);
-}
+	xTimer500 = xTimerCreate("timer500", delay500ms, pdTRUE, NULL, vTimer500Callback);
+	xSystemTime = xTimerCreate("SystemTime", delay1s, pdTRUE, NULL, vSystemTimeCallback);
+	xTimeDiff = xTimerCreate("TimeDiff", 1, pdTRUE, NULL, vTimeDiffCallback);
 
-void MaintenanceMode(void *pvParameters)
-{
-	int isMaintenanceMode = 0;
-	while(1)
-	{
-		if(xSemaphoreTake(xButtonSemaphore, portMAX_DELAY))
-		{
 
-			printf("intterupt in task received \n");
-
-//			printf("sdklajklf \n");
-//			if(isMaintenanceMode == 0)
-//			{
-//				printf("dead");
-//				vTaskSuspend(TimerControl);
-//				vTaskSuspend(ConditionChecking);
-//				vTaskSuspend(ControlCentre);
-//				vTaskSuspend(ManageLoad);
-//				vTaskSuspend(SwitchRead);
-//				vTaskSuspend(LEDController);
-//				isMaintenanceMode = 1;
-//			}
-//			else
-//			{
-//				vTaskResume(TimerControl);
-//				vTaskResume(ConditionChecking);
-//				vTaskResume(ControlCentre);
-//				vTaskResume(ManageLoad);
-//				vTaskResume(SwitchRead);
-//				vTaskResume(LEDController);
-//				printf("alive");
-//				isMaintenanceMode = 0;
-//
-//				//vTaskStartScheduler();
-//			}
-		}
-		vTaskDelay(10);
-	}
+	xTimerStart(xSystemTime,delay1s);
 }
 
 
@@ -222,27 +189,34 @@ void ControlCentre(void *pvParameters)
 	while(1)
 	{
 
+		//printf(" i shou.dnt be printing top \n");
 		//wait for semaphore which will be given by timerISR (500)
-		if(xSemaphoreTake(xTimer500Semaphore, 999999))
+		if(xSemaphoreTake(xTimer500Semaphore, portMAX_DELAY))
 		{
-			printf("time up 500 \n");
-			if(global_unstableFlag == 1) //unstable
+			if(!_maintenanceMode)
 			{
-				//shed more
-				if(xQueueSend(xInstructionQueue, &shedInst, 9999 ) != pdPASS)
+				printf("time up 500 \n");
+				if(global_unstableFlag == 1) //unstable
 				{
-					printf("Failed to instrct to shed (frm control cen");
+					printf("im unstable \n");
+					//shed more
+					if(xQueueSend(xInstructionQueue, &shedInst, portMAX_DELAY ) != pdPASS)
+					{
+						printf("Failed to instrct to shed (frm control cen");
+					}
 				}
-			}
-			else //stable
-			{
-				//connect more
-				if(xQueueSend(xInstructionQueue, &connectInst, 9999 ) != pdPASS)
+				else //stable
 				{
-					printf("failed to instruct to connect (frm control cen)");
+					printf("i shoulndt be printing if im maintain, global_unstable is:%d \n", global_unstableFlag);
+					//connect more
+					if(xQueueSend(xInstructionQueue, &connectInst, portMAX_DELAY ) != pdPASS)
+					{
+						printf("failed to instruct to connect (frm control cen)");
+					}
 				}
 			}
 		}
+
 		vTaskDelay(10);
 	}
 }
@@ -267,109 +241,121 @@ void ManageLoad(void *pvParameters)
 
 	unsigned int temp;
 
+	unsigned int timeCount = 0;
+
 	int i = 0;
 
 	while(1)
 	{
-		//TODO: is this ok? waiting for two queue in the same task?
-		//Check to see if there's any change to the switch value
-		//CHANGE TO PEEK!!!
-		if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueuePeek(xSwitchPositionQueue, &currentSwitchValue, 10) == pdTRUE))
+		if(!_maintenanceMode)
 		{
-			for(i = 0; i < 5; i++)
+			//TODO: is this ok? waiting for two queue in the same task?
+			//Check to see if there's any change to the switch value
+			//CHANGE TO PEEK!!!
+			if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueuePeek(xSwitchPositionQueue, &currentSwitchValue, 10) == pdTRUE))
 			{
-				if((currentSwitchValue & masking[i]) != 0)
-				{
-					switchStatus[i] = 1;
-				}
-				else
-				{
-					switchStatus[i] = 0;
-					loadShedStatus[i] = 0;
-				}
-			}
-			printf("Current Switch Position is %d, %d, %d, %d, %d \n", switchStatus[4],switchStatus[3],switchStatus[2],switchStatus[1],switchStatus[0]);
-		}
-
-		//once peeking of switch value is done, allows LEDs task to receive from the switchPositionqueue
-		xSemaphoreGive(xSwitchSemaphore);
-
-		//Check to see if there's any new instruction
-		if((uxQueueMessagesWaiting(xInstructionQueue) != 0) && (xQueueReceive(xInstructionQueue, &instruction, 10) == pdTRUE))
-		{
-			switch(instruction)
-			{
-			case 0: //connect
-				//Connect the load, based on its priority and whether load's switch is on
-				for(i = 4; i >= 0; i--)
-				{
-					if((loadShedStatus[i] == 1) && (switchStatus[i] == 1))
-					{
-						loadShedStatus[i] = 0; //CONNECT
-						break;
-					}
-				}
-
-				if(loadShedStatus[0] == 0 && loadShedStatus[1] == 0 && loadShedStatus[2] == 0 && loadShedStatus[3] == 0 && loadShedStatus[4] == 0)
-				{
-					taskENTER_CRITICAL();
-					isMonitoring = 0;
-					taskEXIT_CRITICAL();
-				}
-
-				break;
-			case 1: //shed
-				//Shed the load if it's hasn't been shed, based on the priority and whether
-				//switch is on.
 				for(i = 0; i < 5; i++)
 				{
-					if((loadShedStatus[i] == 0) && (switchStatus[i] == 1))
+					if((currentSwitchValue & masking[i]) != 0)
 					{
-						loadShedStatus[i] = 1; //SHED
+						switchStatus[i] = 1;
+					}
+					else
+					{
+						switchStatus[i] = 0;
+						loadShedStatus[i] = 0;
+					}
+				}
+				printf("Current Switch Position is %d, %d, %d, %d, %d \n", switchStatus[4],switchStatus[3],switchStatus[2],switchStatus[1],switchStatus[0]);
+			}
+
+			//once peeking of switch value is done, allows LEDs task to receive from the switchPositionqueue
+			xSemaphoreGive(xSwitchSemaphore);
+
+			//Check to see if there's any new instruction
+			if((uxQueueMessagesWaiting(xInstructionQueue) != 0) && (xQueueReceive(xInstructionQueue, &instruction, 10) == pdTRUE))
+			{
+				switch(instruction)
+				{
+				case 0: //connect
+					//Connect the load, based on its priority and whether load's switch is on
+					for(i = 4; i >= 0; i--)
+					{
+						if((loadShedStatus[i] == 1) && (switchStatus[i] == 1))
+						{
+							loadShedStatus[i] = 0; //CONNECT
+							break;
+						}
+					}
+
+					if(loadShedStatus[0] == 0 && loadShedStatus[1] == 0 && loadShedStatus[2] == 0 && loadShedStatus[3] == 0 && loadShedStatus[4] == 0)
+					{
 						taskENTER_CRITICAL();
-						isMonitoring = 1;
+						isMonitoring = 0;
 						taskEXIT_CRITICAL();
-						break;
 					}
+
+					break;
+				case 1: //shed
+					//Shed the load if it's hasn't been shed, based on the priority and whether
+					//switch is on.
+					for(i = 0; i < 5; i++)
+					{
+						if((loadShedStatus[i] == 0) && (switchStatus[i] == 1))
+						{
+//							// Stop timer
+//							if (timeCount == 0) {
+//								xTimerStop(xTimeDiff, 1);
+//								timeCount = 1;
+//							}
+
+							loadShedStatus[i] = 1; //SHED
+							taskENTER_CRITICAL();
+							isMonitoring = 1;
+							taskEXIT_CRITICAL();
+							break;
+						}
+					}
+
+					//timeCount = 0;
+
+					break;
+				default:
+					printf("invalid inst");
+					break;
 				}
 
-				break;
-			default:
-				printf("invalid inst");
-				break;
-			}
 
 
-			/*
-			foundLoadNotShed = 0;
-			foundLoadNotConnected = 0;
+						foundLoadNotShed = 0;
+						foundLoadNotConnected = 0;
 
-			//if all shedable loads have been shed, stop timer 500
-			for(i = 0; i < 5; i++)
-			{
-				temp = loadShedStatus[i];
-				if (switchStatus[i] == 1) {
-					if (temp) {
-						foundLoadNotConnected = 1;
-					}
-					else {
-						foundLoadNotShed = 1;
-					}
+						//if all shedable loads have been shed, stop timer 500
+						for(i = 0; i < 5; i++)
+						{
+							temp = loadShedStatus[i];
+							if (switchStatus[i] == 1) {
+								if (temp) {
+									foundLoadNotConnected = 1;
+								}
+								else {
+									foundLoadNotShed = 1;
+								}
+							}
+						}
+
+						if(!foundLoadNotShed || !foundLoadNotConnected)
+						{
+							foundLoadNotShed = 0;
+							xTimerStop(xTimer500, 500);
+						}
+
+
+				//push shed status to queue to send to led task
+				if(xQueueSend(xShedLoadStatusQueue, &loadShedStatus, 10) != pdTRUE)
+				{
+					printf("shedding status of all loads was not sent! \n");
 				}
-			}
-
-			if(!foundLoadNotShed || !foundLoadNotConnected)
-			{
-				foundLoadNotShed = 0;
-				xTimerStop(xTimer500, 500);
-			}
-			*/
-
-			//push shed status to queue to send to led task
-			if(xQueueSend(xShedLoadStatusQueue, &loadShedStatus, 10) != pdTRUE)
-			{
-				printf("shedding status of all loads was not sent! \n");
-
 			}
 		}
 
@@ -394,57 +380,53 @@ void LEDController(void *pvParameters)
 
 	while(1)
 	{
-
-		//
-		xSemaphoreTake(xSwitchSemaphore, 10);
-		if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueueReceive(xSwitchPositionQueue, &switchStatusBinary, 10) == pdTRUE))
+		if(!_maintenanceMode)
 		{
-			printf("switch values updated in LEDController! \n");
-			//redLEDs = switchStatusBinary;
-		}
-		xSemaphoreGive(xSwitchSemaphore);
-
-		if((uxQueueMessagesWaiting(xShedLoadStatusQueue) != 0) && (xQueueReceive(xShedLoadStatusQueue, &shedLoadStatus, 10) == pdTRUE))
-		{
-
-			shedStatusBinary = 0;
-			multiplier = 1;
-
-			for(i = 0; i < 5; i++)
+			xSemaphoreTake(xSwitchSemaphore, 10);
+			if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueueReceive(xSwitchPositionQueue, &switchStatusBinary, 10) == pdTRUE))
 			{
-				shedStatusBinary += shedLoadStatus[i] * multiplier;
-				multiplier *= 2;
+				printf("switch values updated in LEDController! \n");
+				//redLEDs = switchStatusBinary;
+			}
+			xSemaphoreGive(xSwitchSemaphore);
+
+			if((uxQueueMessagesWaiting(xShedLoadStatusQueue) != 0) && (xQueueReceive(xShedLoadStatusQueue, &shedLoadStatus, 10) == pdTRUE))
+			{
+
+				shedStatusBinary = 0;
+				multiplier = 1;
+
+				for(i = 0; i < 5; i++)
+				{
+					shedStatusBinary += shedLoadStatus[i] * multiplier;
+					multiplier *= 2;
+				}
+
+				redLEDs = ~(shedStatusBinary & 0x1F);
+				redLEDs = redLEDs & switchStatusBinary;
+				redLEDs = redLEDs & 0x1F; //ignore all switches other than 0-4 switches
+
+				printf("Shed Status is %d, %d, %d, %d, %d \n", shedLoadStatus[4],shedLoadStatus[3],shedLoadStatus[2],shedLoadStatus[1],shedLoadStatus[0]);
+
 			}
 
-			redLEDs = ~(shedStatusBinary & 0x1F);
-			redLEDs = redLEDs & switchStatusBinary;
-			redLEDs = redLEDs & 0x1F; //ignore all switches other than 0-4 switches
+			//printf("led status g: %d, r: %d \n", shedStatusBinary, redLEDs);
 
-			printf("Shed Status is %d, %d, %d, %d, %d \n", shedLoadStatus[4],shedLoadStatus[3],shedLoadStatus[2],shedLoadStatus[1],shedLoadStatus[0]);
+
+			IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, redLEDs);
+			IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, shedStatusBinary);
 
 		}
+		else
+		{	//under maintenance mode
+			IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, _currentSwitchValue);
+			IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x0);
+		}
 
-		//printf("led status g: %d, r: %d \n", shedStatusBinary, redLEDs);
-
-
-		IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, redLEDs);
-		IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, shedStatusBinary);
 
 		vTaskDelay(10);
 	}
 
 }
 
-
-void LCDController(void *pvParameters)
-{
-	while(1)
-	{
-		lcd = fopen(CHARACTER_LCD_NAME, "w");
-		fprintf(lcd, "%c%s", ESC, CLEAR_LCD_STRING);
-		fprintf(lcd, "Current Load");
-		fclose(lcd);
-		vTaskDelay(50);
-	}
-}
 
