@@ -24,10 +24,6 @@ void TimerControl(void *pvParameters)
 					//timer restart successfully
 					previousStatus = global_unstableFlag;
 				}
-
-				// Reset the time difference timer
-				//_timeDiff = 0;
-				//xTimerReset(xTimeDiff,9999);
 			}
 		}
 		vTaskDelay(10);

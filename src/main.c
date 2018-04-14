@@ -5,12 +5,11 @@
 #include "VGA.h"
 #include "Switches.h"
 #include "keyboard.h"
+#include "MeasurementTask.h"
 
 // Definition of Task Stacks
 #define   TASK_STACKSIZE       2048
 
-//QueueHandle_t xFreqQueue;
-//QueueHandle_t xStatusQueue;
 
 // Definition of Semaphore
 SemaphoreHandle_t shared_resource_sem;
@@ -78,6 +77,9 @@ int main(int argc, char* argv[], char* envp[])
 	isMonitoring = 0;
 	_currentSwitchValue = 0;
 
+	actualTimeDifference = 0;
+	_timeDiff = 0;
+
 	//turn it on initially
 	IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x1);
 
@@ -123,7 +125,6 @@ void initInterrupts(void)
 // This function simply creates a message queue and a semaphore
 int initOSDataStructs(void)
 {
-	//	msgqueue = xQueueCreate( MSG_QUEUE_SIZE, sizeof( void* ) );
 	xFreqQueue = xQueueCreate( 100, sizeof( double ) );
 	xDispFreqQueue = xQueueCreate( 100, sizeof( double ) );
 	xStatusQueue = xQueueCreate(100, sizeof(unsigned int));
@@ -131,7 +132,7 @@ int initOSDataStructs(void)
 	xROCQueue = xQueueCreate(100, sizeof(double));
 	xSwitchPositionQueue = xQueueCreate(10, sizeof(unsigned int));
 	xShedLoadStatusQueue = xQueueCreate(10, sizeof(int[5]));
-	//xKeyboardQueue = xQueueCreate(10, sizeof(keyInput));
+	xMeasurementQueue = xQueueCreate(10, sizeof(Measure));
 
 	return 0;
 }
@@ -149,6 +150,9 @@ int initCreateTasks(void)
 	xTaskCreate(SwitchRead, "SwitchRead", 1024, NULL, 1, NULL);
 	xTaskCreate(LEDController, "LEDController", 1024, NULL, 5, NULL);
 	xTaskCreate(keyboardProcessor, "Keyboard", 1024, NULL, 2, NULL);
+
+	xTaskCreate(MeasurementTask, "Measure", 1024, NULL, 4, NULL);
+
 
 	return 0;
 }
@@ -175,7 +179,6 @@ void initTimers(void)
 	xTimer500 = xTimerCreate("timer500", delay500ms, pdTRUE, NULL, vTimer500Callback);
 	xSystemTime = xTimerCreate("SystemTime", delay1s, pdTRUE, NULL, vSystemTimeCallback);
 	xTimeDiff = xTimerCreate("TimeDiff", 1, pdTRUE, NULL, vTimeDiffCallback);
-
 
 	xTimerStart(xSystemTime,delay1s);
 }
@@ -221,6 +224,7 @@ void ControlCentre(void *pvParameters)
 	}
 }
 
+
 void ManageLoad(void *pvParameters)
 {
 	//instruction, 1 = shed, 0 = connect, others: ignore
@@ -241,7 +245,7 @@ void ManageLoad(void *pvParameters)
 
 	unsigned int temp;
 
-	unsigned int timeCount = 0;
+	unsigned int firstShed = 1;
 
 	int i = 0;
 
@@ -251,7 +255,6 @@ void ManageLoad(void *pvParameters)
 		{
 			//TODO: is this ok? waiting for two queue in the same task?
 			//Check to see if there's any change to the switch value
-			//CHANGE TO PEEK!!!
 			if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueuePeek(xSwitchPositionQueue, &currentSwitchValue, 10) == pdTRUE))
 			{
 				for(i = 0; i < 5; i++)
@@ -303,11 +306,15 @@ void ManageLoad(void *pvParameters)
 					{
 						if((loadShedStatus[i] == 0) && (switchStatus[i] == 1))
 						{
-//							// Stop timer
-//							if (timeCount == 0) {
-//								xTimerStop(xTimeDiff, 1);
-//								timeCount = 1;
-//							}
+
+							// Stop the time difference timer
+							if(firstShed == 1) {
+								actualTimeDifference = _timeDiff;
+								_hasNewTimeDiff = 1;
+								printf("Time Diff: %d\n", actualTimeDifference);
+								xTimerStop(xTimeDiff, 1);
+								firstShed = 0;
+							}
 
 							loadShedStatus[i] = 1; //SHED
 							taskENTER_CRITICAL();
@@ -317,8 +324,6 @@ void ManageLoad(void *pvParameters)
 						}
 					}
 
-					//timeCount = 0;
-
 					break;
 				default:
 					printf("invalid inst");
@@ -326,29 +331,36 @@ void ManageLoad(void *pvParameters)
 				}
 
 
+				foundLoadNotShed = 0;
+				foundLoadNotConnected = 0;
 
-						foundLoadNotShed = 0;
-						foundLoadNotConnected = 0;
-
-						//if all shedable loads have been shed, stop timer 500
-						for(i = 0; i < 5; i++)
-						{
-							temp = loadShedStatus[i];
-							if (switchStatus[i] == 1) {
-								if (temp) {
-									foundLoadNotConnected = 1;
-								}
-								else {
-									foundLoadNotShed = 1;
-								}
-							}
+				//if all shedable loads have been shed, stop timer 500
+				for(i = 0; i < 5; i++)
+				{
+					temp = loadShedStatus[i];
+					if (switchStatus[i] == 1) {
+						if (temp) {
+							foundLoadNotConnected = 1;
 						}
-
-						if(!foundLoadNotShed || !foundLoadNotConnected)
-						{
-							foundLoadNotShed = 0;
-							xTimerStop(xTimer500, 500);
+						else {
+							foundLoadNotShed = 1;
 						}
+					}
+				}
+
+				if (!foundLoadNotConnected) {
+					firstShed = 1;
+					taskENTER_CRITICAL();
+					_timeDiff = 0;
+					taskEXIT_CRITICAL();
+					xTimerReset(xTimeDiff,1);
+				}
+
+				if(!foundLoadNotShed || !foundLoadNotConnected)
+				{
+					foundLoadNotShed = 0;
+					xTimerStop(xTimer500, 500);
+				}
 
 
 				//push shed status to queue to send to led task

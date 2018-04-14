@@ -1,6 +1,7 @@
 #include "ConditionChecking.h"
 #include "main.h"
 #include "math.h"
+#include "MeasurementTask.h"
 
 double freqValue;
 double ROC;
@@ -28,8 +29,6 @@ void ConditionChecking(void *pvParameters)
 		{
 			stopLCDReWriting = 0;
 			while(uxQueueMessagesWaiting( xFreqQueue ) != 0){
-
-				//xTimerStart(xTimer500, 9999);
 
 				xQueueReceive( xFreqQueue, (void *) &freqValue, portMAX_DELAY );
 
@@ -75,11 +74,23 @@ void ConditionChecking(void *pvParameters)
 						}
 						//indicates that system is unstable
 						global_unstableFlag = 1;
+
+						if(xTimerStart(xTimeDiff,9999) != pdPASS) {
+							printf("cannot start a timer!\n");
+						}
+
 					}
+
 				}
 				else
 				{
 					global_unstableFlag = 0;
+
+					taskENTER_CRITICAL();
+					_timeDiff = 0;
+					taskEXIT_CRITICAL();
+
+					xTimerStop(xTimeDiff,1);
 				}
 			}
 		}

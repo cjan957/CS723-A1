@@ -39,13 +39,7 @@ unsigned int _timerSinceStartup;
 
 unsigned int _maintenanceMode;
 
-// System time
-unsigned int _systemTime;
-unsigned int _timeDiff;
-unsigned int _maxTime;
-unsigned int _minTime;
-unsigned int _avgTime;
-
+unsigned int _hasNewTimeDiff;
 
 //TIMERS
 TimerHandle_t xTimer500;

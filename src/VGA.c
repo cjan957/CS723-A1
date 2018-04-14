@@ -1,17 +1,11 @@
 #include "VGA.h"
 #include "ConditionChecking.h"
 #include "freq_relay.h"
+#include "MeasurementTask.h"
 #include "main.h"
 
 void VGA_Draw(void *pvParameters) {
 
-
-	char cond1[10];
-	char cond2[10];
-
-	char sysTime[5];
-
-	char timeDiff[10];
 
 	//initialize VGA controllers
 	alt_up_pixel_buffer_dma_dev *pixel_buf;
@@ -56,13 +50,39 @@ void VGA_Draw(void *pvParameters) {
 	alt_up_char_buffer_string(char_buf, "Last 5 Results: ", 7, 44);
 	alt_up_char_buffer_string(char_buf, "System Status", 7, 46);
 
-	alt_up_char_buffer_string(char_buf, "Maximum Time: ", 7, 48);
-	alt_up_char_buffer_string(char_buf, "Minimum Time: ", 7, 50);
-	alt_up_char_buffer_string(char_buf, "Average Time: ", 7, 52);
+	alt_up_char_buffer_string(char_buf, "Measured Time: ", 7, 48);
+	alt_up_char_buffer_string(char_buf, "Maximum Time: ", 7, 50);
+	alt_up_char_buffer_string(char_buf, "Minimum Time: ", 7, 52);
+	alt_up_char_buffer_string(char_buf, "Average Time: ", 7, 54);
 
 	alt_up_char_buffer_string(char_buf, "Time: " ,53, 1);
-	alt_up_char_buffer_string(char_buf, "s" ,63, 1);
+	alt_up_char_buffer_string(char_buf, "s" ,64, 1);
 
+	alt_up_char_buffer_string(char_buf, "ms", 35, 48);
+	alt_up_char_buffer_string(char_buf, "ms", 35, 50);
+	alt_up_char_buffer_string(char_buf, "ms", 35, 52);
+	alt_up_char_buffer_string(char_buf, "ms", 35, 54);
+
+
+	char cond1[10] = "";
+	char cond2[10]= "";
+
+	char sysTime[5]= "";
+
+	char timeDiff[2]= "";
+	char avgTime[2]= "";
+	char maxTime[2]= "";
+	char minTime[2]= "";
+
+	char firstValue[1]= "";
+	char secondValue[1]= "";
+	char thirdValue[1]= "";
+	char fourthValue[1]= "";
+	char fifthValue[1]= "";
+
+
+
+	Measure tempMeasure;
 
 	double freq[100], dfreq[100];
 	double ROC;
@@ -78,6 +98,13 @@ void VGA_Draw(void *pvParameters) {
 			i =	++i%100; //point to the next data (oldest) to be overwritten
 		}
 
+		xQueueReceive(xMeasurementQueue, (void *) &tempMeasure, 0);
+
+		printf("Max: %d\n", tempMeasure.max);
+		printf("Min: %d\n", tempMeasure.min);
+		printf("Avg: %f\n", tempMeasure.avg);
+
+
 		//clear old graph to draw new graph
 		alt_up_pixel_buffer_dma_draw_box(pixel_buf, 101, 0, 639, 199, 0, 0);
 		alt_up_pixel_buffer_dma_draw_box(pixel_buf, 101, 201, 639, 299, 0, 0);
@@ -86,11 +113,32 @@ void VGA_Draw(void *pvParameters) {
 		sprintf(cond2, "%f", condition2_freqencyThreshold);
 
 		sprintf(sysTime, "%d", _systemTime);
-		sprintf(timeDiff, "%d", _timeDiff);
+		sprintf(timeDiff, "%d", actualTimeDifference);
+		sprintf(maxTime, "%d", tempMeasure.max);
+		sprintf(minTime, "%d", tempMeasure.min);
+		sprintf(avgTime, "%f", tempMeasure.avg);
+
+
+		sprintf(firstValue, "%d", tempMeasure.lastFive[0]);
+		sprintf(secondValue, "%d", tempMeasure.lastFive[1]);
+		sprintf(thirdValue, "%d", tempMeasure.lastFive[2]);
+		sprintf(fourthValue, "%d", tempMeasure.lastFive[3]);
+		sprintf(fifthValue, "%d", tempMeasure.lastFive[4]);
+
+		alt_up_char_buffer_string(char_buf, firstValue, 30, 44);
+		alt_up_char_buffer_string(char_buf, secondValue, 34, 44);
+		alt_up_char_buffer_string(char_buf, thirdValue, 38, 44);
+		alt_up_char_buffer_string(char_buf, fourthValue,42, 44);
+		alt_up_char_buffer_string(char_buf, fifthValue, 46, 44);
+
 
 
 		alt_up_char_buffer_string(char_buf, cond1, 30, 40);
 		alt_up_char_buffer_string(char_buf, cond2, 30, 42);
+		alt_up_char_buffer_string(char_buf, timeDiff, 30, 48);
+		alt_up_char_buffer_string(char_buf, maxTime, 30, 50);
+		alt_up_char_buffer_string(char_buf, minTime, 30, 52);
+		alt_up_char_buffer_string(char_buf, avgTime, 30, 54);
 
 		if(!global_unstableFlag) {
 			alt_up_char_buffer_string(char_buf, "Stable  ", 30, 46);
