@@ -381,6 +381,7 @@ void ManageLoad(void *pvParameters)
 void LEDController(void *pvParameters)
 {
 	unsigned int shedLoadStatus[5] = {0,0,0,0,0};
+	unsigned int switchStatus[5] = {0,0,0,0,0}; //new
 
 	int i;
 	unsigned int multiplier = 1;
@@ -388,7 +389,10 @@ void LEDController(void *pvParameters)
 	unsigned int shedStatusBinary = 0;
 	unsigned int switchStatusBinary = 0;
 
-	int greenLEDs = 0;
+	unsigned int masking[5] = {1,2,4,8,16};
+
+	unsigned int turnedOnWhileMonitoring = {0,0,0,0,0,0};
+
 	int redLEDs = _currentSwitchValue;
 
 	while(1)
@@ -396,9 +400,41 @@ void LEDController(void *pvParameters)
 		if(!_maintenanceMode)
 		{
 			xSemaphoreTake(xSwitchSemaphore, 10);
+			//when there's a new switch value.....
 			if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueueReceive(xSwitchPositionQueue, &switchStatusBinary, 10) == pdTRUE))
 			{
 				printf("switch values updated in LEDController! \n");
+
+				for(i = 0; i < 5; i++)
+				{
+					if((switchStatusBinary & masking[i]) != 0)
+					{
+						switchStatus[i] = 1;
+
+						if(isMonitoring)
+						{
+							turnedOnWhileMonitoring[i] = 1;
+						}
+					}
+					else
+					{
+						switchStatus[i] = 0;
+					}
+
+					if(switchStatus[i] == 0)
+					{
+						shedLoadStatus[i] = 0; //set this load as 'not shed' since it has been turned off
+					}
+				}
+
+				shedStatusBinary = 0;
+				multiplier = 1;
+
+				for(i = 0; i < 5; i++)
+				{
+					shedStatusBinary += shedLoadStatus[i] * multiplier;
+					multiplier *= 2;
+				}
 				//redLEDs = switchStatusBinary;
 			}
 			xSemaphoreGive(xSwitchSemaphore);
@@ -415,16 +451,18 @@ void LEDController(void *pvParameters)
 					multiplier *= 2;
 				}
 
-				redLEDs = ~(shedStatusBinary & 0x1F);
-				redLEDs = redLEDs & switchStatusBinary;
-				redLEDs = redLEDs & 0x1F; //ignore all switches other than 0-4 switches
-
 				printf("Shed Status is %d, %d, %d, %d, %d \n", shedLoadStatus[4],shedLoadStatus[3],shedLoadStatus[2],shedLoadStatus[1],shedLoadStatus[0]);
 
 			}
 
-			//printf("led status g: %d, r: %d \n", shedStatusBinary, redLEDs);
 
+			//printf("led status g: %d, r: %d \n", shedStatusBinary, redLEDs);
+			//find the right redLEDs value based on the masking 'turnedOnWhileMonitoring'
+
+
+			redLEDs = ~(shedStatusBinary & 0x1F);
+			redLEDs = redLEDs & switchStatusBinary;
+			redLEDs = redLEDs & 0x1F; //ignore all switches other than 0-4 switches
 
 			IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, redLEDs);
 			IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, shedStatusBinary);
@@ -432,11 +470,21 @@ void LEDController(void *pvParameters)
 		}
 		else
 		{	//under maintenance mode
+
+//			switchStatusBinary = _currentSwitchValue;
+//
+//			shedLoadStatus[0] = 0;
+//			shedLoadStatus[1] = 0;
+//			shedLoadStatus[2] = 0;
+//			shedLoadStatus[3] = 0;
+//			shedLoadStatus[4] = 0;
+//			shedLoadStatus[5] = 0;
+//
+//			shedStatusBinary = 0;
+
 			IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, _currentSwitchValue);
 			IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x0);
 		}
-
-
 		vTaskDelay(10);
 	}
 
