@@ -61,7 +61,7 @@ void VGA_Draw(void *pvParameters) {
 	char cond1[10] = "";
 	char cond2[10]= "";
 
-	char sysTime[5]= "";
+	char sysTime[10]= "";
 
 	char timeDiff[10]= "";
 	char avgTime[10]= "";
