@@ -84,6 +84,17 @@ void VGA_Draw(void *pvParameters) {
 
 	Measure tempMeasure;
 
+	tempMeasure.max = 0;
+	tempMeasure.min = 0;
+	tempMeasure.avg = 0;
+
+	tempMeasure.lastFive[4] = 0;
+	tempMeasure.lastFive[3] = 0;
+	tempMeasure.lastFive[2] = 0;
+    tempMeasure.lastFive[1] = 0;
+    tempMeasure.lastFive[0] = 0;
+
+
 	double freq[100], dfreq[100];
 	double ROC;
 	int i = 99, j = 0;

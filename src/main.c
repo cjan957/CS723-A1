@@ -353,7 +353,8 @@ void ManageLoad(void *pvParameters)
 					taskENTER_CRITICAL();
 					_timeDiff = 0;
 					taskEXIT_CRITICAL();
-					xTimerReset(xTimeDiff,1);
+					xTimerStop(xTimeDiff, portMAX_DELAY);
+					//xTimerReset(xTimeDiff,1); //why here???
 				}
 
 				if(!foundLoadNotShed || !foundLoadNotConnected)

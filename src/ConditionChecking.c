@@ -60,6 +60,8 @@ void ConditionChecking(void *pvParameters)
 
 					if(!_maintenanceMode) {
 						//UNSTABLE
+
+						//this is when it's unstable for the first time
 						if(!isMonitoring && _currentSwitchValue != 0)
 						{
 							//start monitoring, initially unstable (first time)
@@ -67,17 +69,19 @@ void ConditionChecking(void *pvParameters)
 							{
 								printf("Failed to instrct to shed for the first time (frm condi checking)");
 							}
+
 							if(xTimerStart(xTimer500, 9999) != pdPASS)
 							{
 								printf("cannot start a timer");
+							}
+
+							if(xTimerStart(xTimeDiff,portMAX_DELAY) != pdPASS) {
+								printf("cannot start a timer (timer that goes up by 1ms) for checking time from freq to first shed !\n");
 							}
 						}
 						//indicates that system is unstable
 						global_unstableFlag = 1;
 
-						if(xTimerStart(xTimeDiff,9999) != pdPASS) {
-							printf("cannot start a timer!\n");
-						}
 
 					}
 

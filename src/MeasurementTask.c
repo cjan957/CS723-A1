@@ -26,13 +26,16 @@ void MeasurementTask(void *pvParameters) {
 	while(1) {
 		if (global_unstableFlag) {
 
-			if (_hasNewTimeDiff) {
+			if (_hasNewTimeDiff) { //when first load is shed (LED off)
 				getMax();
 				getMin();
 				getAvg();
 				getLastFive();
 
-				xQueueSend(xMeasurementQueue, &measure, 0);
+				if(xQueueSend(xMeasurementQueue, &measure, 0) != pdPASS)
+				{
+					printf("missing data! \n");
+				}
 			}
 		}
 		vTaskDelay(1);
