@@ -56,12 +56,6 @@ void VGA_Draw(void *pvParameters) {
 	alt_up_char_buffer_string(char_buf, "Average Time: ", 7, 54);
 
 	alt_up_char_buffer_string(char_buf, "Time: " ,53, 1);
-	alt_up_char_buffer_string(char_buf, "s" ,64, 1);
-
-	alt_up_char_buffer_string(char_buf, "ms", 35, 48);
-	alt_up_char_buffer_string(char_buf, "ms", 35, 50);
-	alt_up_char_buffer_string(char_buf, "ms", 35, 52);
-	alt_up_char_buffer_string(char_buf, "ms", 35, 54);
 
 
 	char cond1[10] = "";
@@ -69,10 +63,10 @@ void VGA_Draw(void *pvParameters) {
 
 	char sysTime[5]= "";
 
-	char timeDiff[2]= "";
-	char avgTime[2]= "";
-	char maxTime[2]= "";
-	char minTime[2]= "";
+	char timeDiff[10]= "";
+	char avgTime[10]= "";
+	char maxTime[10]= "";
+	char minTime[10]= "";
 
 	char firstValue[1]= "";
 	char secondValue[1]= "";
@@ -111,23 +105,18 @@ void VGA_Draw(void *pvParameters) {
 
 		xQueueReceive(xMeasurementQueue, (void *) &tempMeasure, 0);
 
-		printf("Max: %d\n", tempMeasure.max);
-		printf("Min: %d\n", tempMeasure.min);
-		printf("Avg: %f\n", tempMeasure.avg);
-
-
 		//clear old graph to draw new graph
 		alt_up_pixel_buffer_dma_draw_box(pixel_buf, 101, 0, 639, 199, 0, 0);
 		alt_up_pixel_buffer_dma_draw_box(pixel_buf, 101, 201, 639, 299, 0, 0);
 
-		sprintf(cond1, "%f", condition1_freqencyThreshold);
-		sprintf(cond2, "%f", condition2_freqencyThreshold);
+		sprintf(cond1, "%.2f Hz", condition1_freqencyThreshold);
+		sprintf(cond2, "%.2f Hz/s", condition2_freqencyThreshold);
 
-		sprintf(sysTime, "%d", _systemTime);
-		sprintf(timeDiff, "%d", actualTimeDifference);
-		sprintf(maxTime, "%d", tempMeasure.max);
-		sprintf(minTime, "%d", tempMeasure.min);
-		sprintf(avgTime, "%f", tempMeasure.avg);
+		sprintf(sysTime, "%d s", _systemTime);
+		sprintf(timeDiff, "%d ms", actualTimeDifference);
+		sprintf(maxTime, "%d ms", tempMeasure.max);
+		sprintf(minTime, "%d ms", tempMeasure.min);
+		sprintf(avgTime, "%.2f ms", tempMeasure.avg);
 
 
 		sprintf(firstValue, "%d", tempMeasure.lastFive[0]);

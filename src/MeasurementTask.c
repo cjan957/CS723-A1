@@ -1,6 +1,5 @@
 #include "MeasurementTask.h"
 
-
 unsigned int count = 1;
 double average;
 unsigned int max;
@@ -8,14 +7,13 @@ unsigned int min;
 
 double accumulated;
 
-
 Measure measure;
 
 void MeasurementTask(void *pvParameters) {
 
-	average = 0;
-	max = 0;
-	min = 0;
+	average = (double) actualTimeDifference;;
+	max = actualTimeDifference;
+	min = actualTimeDifference;
 
 	measure.avg = (double) actualTimeDifference;
 	measure.max = actualTimeDifference;
@@ -48,23 +46,17 @@ void getLastFive() {
 	unsigned int resultIndex = 4;
 	if (_hasNewTimeDiff) {
 
-		measure.lastFive[0] = actualTimeDifference;
+
 
 		for (resultIndex = 4; resultIndex > 0; resultIndex--) {
 			measure.lastFive[resultIndex] = measure.lastFive[resultIndex - 1];
 		}
 
+		measure.lastFive[0] = actualTimeDifference;
+
 		taskENTER_CRITICAL();
 		_hasNewTimeDiff = 0;
 		taskEXIT_CRITICAL();
-
-		printf("Results: [");
-
-		for (resultIndex = 0; resultIndex < 5; resultIndex++) {
-			printf("%d,",measure.lastFive[resultIndex]);
-		}
-
-		printf("]\n");
 
 	}
 

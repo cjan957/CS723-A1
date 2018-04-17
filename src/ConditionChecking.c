@@ -55,7 +55,7 @@ void ConditionChecking(void *pvParameters)
 					fclose(lcd);
 				}
 
-				if( (freqValue < condition1_freqencyThreshold)  || (fabs(dfreq[i]) > condition2_freqencyThreshold))
+				if( (freqValue < condition1_freqencyThreshold) || (fabs(dfreq[i]) > condition2_freqencyThreshold))
 				{
 
 					if(!_maintenanceMode) {
