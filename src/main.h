@@ -54,6 +54,7 @@ SemaphoreHandle_t xSwitchSemaphore;
 SemaphoreHandle_t xButtonSemaphore;
 
 
+
 FILE* lcd;
 
 #define ESC 27
@@ -64,5 +65,7 @@ void ManageLoad(void *pvParameters);
 void LEDController(void *pvParameters);
 void initTimers(void);
 void initSemaphores(void);
+void initFlags(void);
+int setupKeyboard(void);
 
 #endif /* MAIN_H_ */

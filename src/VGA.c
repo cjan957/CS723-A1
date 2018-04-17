@@ -74,8 +74,6 @@ void VGA_Draw(void *pvParameters) {
 	char fourthValue[1]= "";
 	char fifthValue[1]= "";
 
-
-
 	Measure tempMeasure;
 
 	tempMeasure.max = 0;

@@ -24,7 +24,8 @@ void MeasurementTask(void *pvParameters) {
 	while(1) {
 		if (global_unstableFlag) {
 
-			if (_hasNewTimeDiff) { //when first load is shed (LED off)
+			if(xSemaphoreTake(xHasNewTimeDiff, portMAX_DELAY)) //when first load is shed (LED off)
+			{
 				getMax();
 				getMin();
 				getAvg();
@@ -36,7 +37,6 @@ void MeasurementTask(void *pvParameters) {
 				}
 			}
 		}
-		vTaskDelay(1);
 	}
 
 }
@@ -44,21 +44,12 @@ void MeasurementTask(void *pvParameters) {
 void getLastFive() {
 
 	unsigned int resultIndex = 4;
-	if (_hasNewTimeDiff) {
 
-
-
-		for (resultIndex = 4; resultIndex > 0; resultIndex--) {
-			measure.lastFive[resultIndex] = measure.lastFive[resultIndex - 1];
-		}
-
-		measure.lastFive[0] = actualTimeDifference;
-
-		taskENTER_CRITICAL();
-		_hasNewTimeDiff = 0;
-		taskEXIT_CRITICAL();
-
+	for (resultIndex = 4; resultIndex > 0; resultIndex--) {
+		measure.lastFive[resultIndex] = measure.lastFive[resultIndex - 1];
 	}
+
+	measure.lastFive[0] = actualTimeDifference;
 
 }
 
@@ -88,8 +79,6 @@ void getAvg() {
 	average = accumulated / count;
 	measure.avg = average;
 	count++;
-
-
 
 }
 

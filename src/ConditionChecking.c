@@ -56,8 +56,7 @@ void ConditionChecking(void *pvParameters)
 				}
 
 				//TODO: change back
-				//if( (freqValue < condition1_freqencyThreshold) || (fabs(dfreq[i]) > condition2_freqencyThreshold))
-				if( (freqValue < condition1_freqencyThreshold) )
+				if( (freqValue < condition1_freqencyThreshold) || (fabs(dfreq[i]) > condition2_freqencyThreshold))
 				{
 
 					if(!_maintenanceMode) {

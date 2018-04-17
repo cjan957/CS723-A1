@@ -19,6 +19,8 @@ typedef struct {
 
 QueueHandle_t xMeasurementQueue;
 
+SemaphoreHandle_t xHasNewTimeDiff;
+
 // System time
 unsigned int _systemTime;
 unsigned int _timeDiff;

@@ -8,6 +8,8 @@
 #ifndef SWITCHES_H_
 #define SWITCHES_H_
 
+#include "main.h"
+
 QueueHandle_t xSwitchPositionQueue;
 void SwitchRead (void *pvParameters);
 
