@@ -1,5 +1,7 @@
 #include "ControlCentre.h"
 
+// Sends instructions through a queue to the ManageLoad task whether to shed or connect
+// It will send an instruction to connect if it is stable and shed if it is unstable
 void ControlCentre(void *pvParameters)
 {
 	int shedInst = 1;
@@ -8,7 +10,6 @@ void ControlCentre(void *pvParameters)
 	while(1)
 	{
 
-		//printf(" i shou.dnt be printing top \n");
 		//wait for semaphore which will be given by timerISR (500)
 		if(xSemaphoreTake(xTimer500Semaphore, portMAX_DELAY))
 		{
@@ -26,7 +27,6 @@ void ControlCentre(void *pvParameters)
 				}
 				else //stable
 				{
-					printf("i shoulndt be printing if im maintain, global_unstable is:%d \n", global_unstableFlag);
 					//connect more
 					if(xQueueSend(xInstructionQueue, &connectInst, portMAX_DELAY ) != pdPASS)
 					{

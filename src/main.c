@@ -25,12 +25,10 @@ FILE* lcd;
 unsigned int numberOfLoadConnected = 5;
 
 
-// Local Function Prototypes
 int initOSDataStructs(void);
 int initCreateTasks(void);
 
 void initInterrupts(void);
-
 
 const TickType_t delay50ms = 50/ portTICK_PERIOD_MS;
 const TickType_t delay10ms = 10/ portTICK_PERIOD_MS;
@@ -51,7 +49,7 @@ int main(int argc, char* argv[], char* envp[])
 	// Initialise LEDs
 	IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x0);
 
-	//get initial switch value
+	//Get initial switch value
 	_currentSwitchValue = IORD_ALTERA_AVALON_PIO_DATA(SLIDE_SWITCH_BASE);
 	IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, _currentSwitchValue);
 
@@ -74,6 +72,7 @@ void initSemaphores(void)
 	}
 }
 
+// Sets the flag to enable/disable maintenance mode
 void maintenance_button_int(void* context, alt_u32 id)
 {
 	_maintenanceMode = !_maintenanceMode;
@@ -90,7 +89,7 @@ void initInterrupts(void)
 }
 
 
-// This function simply creates a message queue and a semaphore
+// Initialises Queues
 int initOSDataStructs(void)
 {
 	xFreqQueue = xQueueCreate( 100, sizeof( double ) );
@@ -105,7 +104,6 @@ int initOSDataStructs(void)
 	return 0;
 }
 
-// This function creates the tasks used in this example
 int initCreateTasks(void)
 {
 
@@ -164,7 +162,8 @@ int setupKeyboard(void)
 	alt_up_ps2_clear_fifo (ps2_device) ;
 
 	alt_irq_register(PS2_IRQ, ps2_device, ps2_isr);
-	// register the PS/2 interrupt
+
+	// Register the PS/2 interrupt
 	IOWR_8DIRECT(PS2_BASE,4,1);
 
 	return 0;

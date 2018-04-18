@@ -3,6 +3,9 @@
 #include "MeasurementTask.h"
 #include "Switches.h"
 
+// Sends a queue which describes which loads have been shed or connected
+// However, when it is in maintenance mode, the switch value is replaced with the current switch value
+// and the loadShedStatus array is just replaced with 0
 void ManageLoad(void *pvParameters)
 {
 	//instruction, 1 = shed, 0 = connect, others: ignore
@@ -32,7 +35,6 @@ void ManageLoad(void *pvParameters)
 
 		if(!_maintenanceMode)
 		{
-			//TODO: is this ok? waiting for two queue in the same task?
 			//Check to see if there's any change to the switch value
 			if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueuePeek(xSwitchPositionQueue, &currentSwitchValue, 10) == pdTRUE))
 			{
@@ -90,7 +92,6 @@ void ManageLoad(void *pvParameters)
 							if(firstShed == 1) {
 								actualTimeDifference = _timeDiff;
 								xSemaphoreGive(xHasNewTimeDiff);
-								//_hasNewTimeDiff = 1;
 								printf("Time Diff: %d\n", actualTimeDifference);
 								xTimerStop(xTimeDiff, 1);
 								firstShed = 0;
@@ -128,13 +129,13 @@ void ManageLoad(void *pvParameters)
 					}
 				}
 
+				// Stops the time difference timer
 				if (!foundLoadNotConnected) {
 					firstShed = 1;
 					taskENTER_CRITICAL();
 					_timeDiff = 0;
 					taskEXIT_CRITICAL();
 					xTimerStop(xTimeDiff, portMAX_DELAY);
-					//xTimerReset(xTimeDiff,1); //why here???
 				}
 
 				if(!foundLoadNotShed || !foundLoadNotConnected)
@@ -169,9 +170,11 @@ void ManageLoad(void *pvParameters)
 				}
 				loadShedStatus[i] = 0;
 			}
+
 		}
 
 		vTaskDelay(10);
+
 	}
 }
 

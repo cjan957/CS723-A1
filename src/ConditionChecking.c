@@ -12,7 +12,8 @@ unsigned int stable_status = 0;
 double freq[100], dfreq[100];
 int i = 99, j = 0;
 
-
+// Checks the condition of the instantaneous frequency values and the rate of change values
+// and determines whether the system is stable or unstable by setting a global flag to be true
 void ConditionChecking(void *pvParameters)
 {
 
@@ -22,7 +23,6 @@ void ConditionChecking(void *pvParameters)
 
 	int stopLCDReWriting = 0;
 
-	// TODO: Change to binary semaphore
 	while(1)
 	{
 		if( xSemaphoreTake( xConditionSemaphore,10) == pdTRUE )
@@ -55,35 +55,36 @@ void ConditionChecking(void *pvParameters)
 					fclose(lcd);
 				}
 
-				//TODO: change back
+				// Checks whether the instantaneous is below the threshold or above the ROC threshold
 				if( (freqValue < condition1_freqencyThreshold) || (fabs(dfreq[i]) > condition2_freqencyThreshold))
 				{
 
 					if(!_maintenanceMode) {
 						//UNSTABLE
 
-						//this is when it's unstable for the first time
+						// This is when it's unstable for the first time
 						if(!isMonitoring && _currentSwitchValue != 0)
 						{
-							//start monitoring, initially unstable (first time)
+							// Start monitoring, initially unstable (first time)
 							if(xQueueSend(xInstructionQueue, &shedInst, 9999 ) != pdPASS)
 							{
-								printf("Failed to instrct to shed for the first time (frm condi checking)");
+								printf("Failed to instrct to shed for the first time (frm condi checking)\n");
 							}
 
+							// Starts the 500 ms timer
 							if(xTimerStart(xTimer500, 9999) != pdPASS)
 							{
 								printf("cannot start a timer");
 							}
 
+							// Start the timer for the time difference from the voltage peak to the first load shed
 							if(xTimerStart(xTimeDiff,portMAX_DELAY) != pdPASS) {
 								printf("cannot start a timer (timer that goes up by 1ms) for checking time from freq to first shed !\n");
 							}
 						}
-						//indicates that system is unstable
+
+						// Indicates that system is unstable
 						global_unstableFlag = 1;
-
-
 					}
 
 				}
@@ -91,6 +92,7 @@ void ConditionChecking(void *pvParameters)
 				{
 					global_unstableFlag = 0;
 
+					// Mutex guarding
 					taskENTER_CRITICAL();
 					_timeDiff = 0;
 					taskEXIT_CRITICAL();
@@ -104,7 +106,8 @@ void ConditionChecking(void *pvParameters)
 	}
 }
 
-void calculateROC() {
+void calculateROC()
+{
 
 	//calculate frequency RoC
 

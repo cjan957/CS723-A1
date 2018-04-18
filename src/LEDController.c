@@ -2,6 +2,9 @@
 #include "Switches.h"
 #include "main.h"
 
+// Reads the shedding status and the value of the switches and
+// does bitwise operation in order to light up the red LEDs
+// The green LEDs just correspond to the shedding status
 void LEDController(void *pvParameters)
 {
 	unsigned int shedLoadStatus[5] = {0,0,0,0,0};
@@ -27,18 +30,19 @@ void LEDController(void *pvParameters)
 	{
 		if(!_maintenanceMode)
 		{
+			// Refer to ManageLoad.c
 			xSemaphoreTake(xSwitchSemaphore, 10);
-			//when there's a new switch value.....
+			//when there's a new switch value
 			if((uxQueueMessagesWaiting(xSwitchPositionQueue) != 0) && (xQueueReceive(xSwitchPositionQueue, &switchStatusBinary, 10) == pdTRUE))
 			{
 				printf("switch values updated in LEDController! \n");
 
+				// Updates the switch array to be the same as the received value
 				for(i = 0; i < 5; i++)
 				{
 					if((switchStatusBinary & masking[i]) != 0)
 					{
 						new_switchStatus[i] = 1;
-
 					}
 					else
 					{
@@ -66,7 +70,7 @@ void LEDController(void *pvParameters)
 				}
 
 
-				//copy the new switch values to the prev Switch array
+				// Copy the new switch values to the prev Switch array
 				for(i = 0; i < 5; i++)
 				{
 					prev_switchStatus[i] = new_switchStatus[i];
@@ -77,6 +81,7 @@ void LEDController(void *pvParameters)
 				shedStatusBinary = 0;
 				multiplier = 1;
 
+				// Converts the array values to be binary
 				for(i = 0; i < 5; i++)
 				{
 					shedStatusBinary += shedLoadStatus[i] * multiplier;
@@ -84,7 +89,7 @@ void LEDController(void *pvParameters)
 				}
 
 			}
-			xSemaphoreGive(xSwitchSemaphore);
+			//xSemaphoreGive(xSwitchSemaphore);
 
 			if((uxQueueMessagesWaiting(xShedLoadStatusQueue) != 0) && (xQueueReceive(xShedLoadStatusQueue, &shedLoadStatus, 10) == pdTRUE))
 			{
@@ -120,7 +125,7 @@ void LEDController(void *pvParameters)
 		{	//under maintenance mode
 
 			IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, _currentSwitchValue);
-			IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x0);
+			IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, 0x0); // Disables all the green LEDs
 
 
 			//replace currentSwitch array to be what the actual switch value is

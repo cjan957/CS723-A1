@@ -9,6 +9,9 @@ double accumulated;
 
 Measure measure;
 
+
+// Calculates the maximum, minimum, average, and the last five results
+// but only runs when there is a new time difference value
 void MeasurementTask(void *pvParameters) {
 
 	average = (double) actualTimeDifference;;
@@ -22,19 +25,17 @@ void MeasurementTask(void *pvParameters) {
 	accumulated = 0;
 
 	while(1) {
-		if (global_unstableFlag) {
 
-			if(xSemaphoreTake(xHasNewTimeDiff, portMAX_DELAY)) //when first load is shed (LED off)
+		if(xSemaphoreTake(xHasNewTimeDiff, portMAX_DELAY)) // When first load is shed (LED off)
+		{
+			getMax();
+			getMin();
+			getAvg();
+			getLastFive();
+
+			if(xQueueSend(xMeasurementQueue, &measure, 0) != pdPASS)
 			{
-				getMax();
-				getMin();
-				getAvg();
-				getLastFive();
-
-				if(xQueueSend(xMeasurementQueue, &measure, 0) != pdPASS)
-				{
-					printf("missing data! \n");
-				}
+				printf("missing data! \n");
 			}
 		}
 	}
@@ -45,10 +46,12 @@ void getLastFive() {
 
 	unsigned int resultIndex = 4;
 
+	// Shifts the results along
 	for (resultIndex = 4; resultIndex > 0; resultIndex--) {
 		measure.lastFive[resultIndex] = measure.lastFive[resultIndex - 1];
 	}
 
+	// Stores the latest value
 	measure.lastFive[0] = actualTimeDifference;
 
 }
@@ -75,6 +78,7 @@ void getMin() {
 
 void getAvg() {
 
+	// Calculates the average for all the values rather than the last five results
 	accumulated += (double) actualTimeDifference;
 	average = accumulated / count;
 	measure.avg = average;

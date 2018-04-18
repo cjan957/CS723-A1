@@ -14,9 +14,7 @@ void VGA_Draw(void *pvParameters) {
 		printf("can't find pixel buffer device\n");
 	}
 
-	// Uncommenting the following line makes the program crash
 	alt_up_pixel_buffer_dma_clear_screen(pixel_buf, 0);
-
 
 	alt_up_char_buffer_dev *char_buf;
 	char_buf = alt_up_char_buffer_open_dev("/dev/video_character_buffer_with_dma");
@@ -45,9 +43,10 @@ void VGA_Draw(void *pvParameters) {
 	alt_up_char_buffer_string(char_buf, "-30", 9, 34);
 	alt_up_char_buffer_string(char_buf, "-60", 9, 36);
 
+	// Set up the text
 	alt_up_char_buffer_string(char_buf, "Frequency Threshold: ", 7, 40);
 	alt_up_char_buffer_string(char_buf, "ROC Threshold: ", 7, 42);
-	alt_up_char_buffer_string(char_buf, "Last 5 Results: ", 7, 44);
+	alt_up_char_buffer_string(char_buf, "Last 5 Results(ms): ", 7, 44);
 	alt_up_char_buffer_string(char_buf, "System Status", 7, 46);
 
 	alt_up_char_buffer_string(char_buf, "Measured Time: ", 7, 48);
@@ -94,7 +93,7 @@ void VGA_Draw(void *pvParameters) {
 
 	while(1) {
 
-		//receive frequency data from queue
+		// Receive frequency data from queue
 		while(uxQueueMessagesWaiting(xDispFreqQueue) != 0){
 			xQueueReceive(xDispFreqQueue, freq+i, 0 );
 			xQueueReceive(xROCQueue, dfreq+i, 0 );
@@ -107,6 +106,7 @@ void VGA_Draw(void *pvParameters) {
 		alt_up_pixel_buffer_dma_draw_box(pixel_buf, 101, 0, 639, 199, 0, 0);
 		alt_up_pixel_buffer_dma_draw_box(pixel_buf, 101, 201, 639, 299, 0, 0);
 
+		// Converts the values to be characters so that it can be plotted
 		sprintf(cond1, "%.2f Hz", condition1_freqencyThreshold);
 		sprintf(cond2, "%.2f Hz/s", condition2_freqencyThreshold);
 
@@ -123,6 +123,7 @@ void VGA_Draw(void *pvParameters) {
 		sprintf(fourthValue, "%d", tempMeasure.lastFive[3]);
 		sprintf(fifthValue, "%d", tempMeasure.lastFive[4]);
 
+		// Displays the last 5 results
 		alt_up_char_buffer_string(char_buf, firstValue, 30, 44);
 		alt_up_char_buffer_string(char_buf, secondValue, 34, 44);
 		alt_up_char_buffer_string(char_buf, thirdValue, 38, 44);
@@ -130,9 +131,11 @@ void VGA_Draw(void *pvParameters) {
 		alt_up_char_buffer_string(char_buf, fifthValue, 46, 44);
 
 
-
+		// Displays the conditions
 		alt_up_char_buffer_string(char_buf, cond1, 30, 40);
 		alt_up_char_buffer_string(char_buf, cond2, 30, 42);
+
+		// Displays all the calculated times
 		alt_up_char_buffer_string(char_buf, timeDiff, 30, 48);
 		alt_up_char_buffer_string(char_buf, maxTime, 30, 50);
 		alt_up_char_buffer_string(char_buf, minTime, 30, 52);
@@ -147,6 +150,7 @@ void VGA_Draw(void *pvParameters) {
 		alt_up_char_buffer_string(char_buf, sysTime,60, 1);
 
 
+		// Plots the data
 		for(j=0;j<99;++j){ //i here points to the oldest data, j loops through all the data to be drawn on VGA
 			if (((int)(freq[(i+j)%100]) > MIN_FREQ) && ((int)(freq[(i+j+1)%100]) > MIN_FREQ)){
 				//Calculate coordinates of the two data points to draw a line in between

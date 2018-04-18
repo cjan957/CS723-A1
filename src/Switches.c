@@ -1,13 +1,7 @@
-/*
- * Switches.c
- *
- *  Created on: 7/04/2018
- *      Author: cjan957
- */
-
 #include "main.h"
 #include "Switches.h"
 
+// Polls for the switch values and sends data to the queue only when there is a change in the switch values
 void SwitchRead (void *pvParameters)
 {
 	unsigned int currentSwitchValue;
@@ -17,8 +11,9 @@ void SwitchRead (void *pvParameters)
 		//Read switch from IO // Polling
 		currentSwitchValue = IORD_ALTERA_AVALON_PIO_DATA(SLIDE_SWITCH_BASE);
 		currentSwitchValue = currentSwitchValue & 0x1F; //masking
-		_currentSwitchValue = currentSwitchValue;
+		_currentSwitchValue = currentSwitchValue; // Updates the global switch value
 
+		// Should not be monitoring when no loads are connected
 		if(currentSwitchValue == 0)
 		{
 			taskENTER_CRITICAL();

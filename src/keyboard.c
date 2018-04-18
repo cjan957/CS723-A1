@@ -1,7 +1,7 @@
 #include "keyboard.h"
 #include "ConditionChecking.h"
 
-
+// Goes into this interrupt everytime there is a keypress
 void ps2_isr (void* context, alt_u32 id)
 {
 
@@ -13,11 +13,15 @@ void ps2_isr (void* context, alt_u32 id)
 	KB_CODE_TYPE decode_mode;
 	status = decode_scancode(context, &decode_mode , &key , &ascii) ;
 
+	// When the system starts up, an unwanted signal is sent
+	// This handles it so that the count will not increment incorrectly
 	if (initKeyboard == 1) {
 		keyboardFlag = 0;
 		initKeyboard = 0;
 	}
 
+	// Please note that some keyboards might be different so that this condition might be changed
+	// The keyboard interrupt triggers more than once and this handle
 	if (keyboardFlag  > 2) {
 		keyboardFlag = 0;
 		if ( status == 0 ) //success
@@ -31,7 +35,11 @@ void ps2_isr (void* context, alt_u32 id)
 		}
 	}
 }
-
+// Sets the global thresholds
+// Press F1 to set the frequency threshold
+// Press F2 to set the ROC threshold
+// Type two digits
+// Press Enter when done (not the one next to the keypad)
 void keyboardProcessor(void *pvParameters) {
 
 	int tempChar[2] = {0};
@@ -51,9 +59,8 @@ void keyboardProcessor(void *pvParameters) {
 			switch ( keys.decode_mode )
 			{
 			case KB_ASCII_MAKE_CODE :
-				// Convert to ascii
-				//printf("TEST: %d\n", keys.ascii - 48);
 
+				// Only allows numbers
 				if (((int)keys.ascii >= 48) && ((int)keys.ascii <= 57)) {
 
 					if (index > 2) {
@@ -63,22 +70,18 @@ void keyboardProcessor(void *pvParameters) {
 						index++;
 					}
 				}
-
 				break ;
 			case KB_LONG_BINARY_MAKE_CODE :
 				// do nothing
 			case KB_BINARY_MAKE_CODE :
 
-				// TODO: Must prevent from changing conditions incorrectly
 				// Press F1 for changing instantaneous frequency
 				if (keys.key == 5) {
 					condition = 1;
-					printf ("F1 PRESSED!\n");
 				}
 				// Press F2 for changing ROC
 				else if (keys.key == 6) {
 					condition = 2;
-					printf ("F2 PRESSED!\n");
 				}
 				// Enter key
 				else if (keys.key == 90 ) {
@@ -117,7 +120,6 @@ void keyboardProcessor(void *pvParameters) {
 			case KB_BREAK_CODE :
 				// do nothing
 			default :
-				//printf ( "DEFAULT   : %x\n", keys.key  ) ;
 				break ;
 			}
 

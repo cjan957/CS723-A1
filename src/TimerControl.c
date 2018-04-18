@@ -2,6 +2,8 @@
 #include "main.h"
 #include "TimerControl.h"
 
+
+// Restarts the timer when there is a status change
 void TimerControl(void *pvParameters)
 {
 
