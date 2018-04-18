@@ -58,7 +58,6 @@ void ConditionChecking(void *pvParameters)
 				// Checks whether the instantaneous is below the threshold or above the ROC threshold
 				if( (freqValue < condition1_freqencyThreshold) || (fabs(dfreq[i]) > condition2_freqencyThreshold))
 				{
-
 					if(!_maintenanceMode) {
 						//UNSTABLE
 

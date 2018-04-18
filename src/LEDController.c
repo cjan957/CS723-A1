@@ -118,7 +118,7 @@ void LEDController(void *pvParameters)
 			redLEDs = redLEDs & ~swOnMaskingValue;
 
 			IOWR_ALTERA_AVALON_PIO_DATA(RED_LEDS_BASE, redLEDs);
-			IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, shedStatusBinary);
+			IOWR_ALTERA_AVALON_PIO_DATA(GREEN_LEDS_BASE, shedStatusBinary & ~swOnMaskingValue);
 
 		}
 		else
