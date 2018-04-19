@@ -3,9 +3,9 @@
 ## Chanokpol Janveerawat and Josh Asi
 
 ### Hardware Requirements
-• DE2-115 Development Board
-• PS/2 Keyboard
-• VGA monitor
+- DE2-115 Development Board
+- PS/2 Keyboard
+- VGA monitor
 
 ### Set up
 - Make a new Nios II Application and BSP from Template
